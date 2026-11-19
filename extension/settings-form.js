@@ -1,6 +1,7 @@
 // The settings form, shared by the extension's options dialog and the web page.
 // `storage` has the chrome.storage.sync shape: get(keys) and set(items), both async.
-// With `multiple`, it saves a list of stops in `stops` instead of one in `stop`.
+// With `multiple`, a Save button adds stops, each with its own flash time, to a list in `stops`.
+// Without it, changes save as soon as they're made to `stop` and `nearMinutes`.
 import { displayName } from './arrival.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS, paintIcon } from './icon.js';
 
@@ -13,6 +14,7 @@ export async function initSettings(container, storage, timetable, onChange = () 
     <label class="inline">
       Flash when the bus is <input id="near" type="number" min="1" max="60" /> minutes away or less
     </label>
+    <button id="save" type="button">Save</button>
     <p id="status" role="status"></p>
     <p class="heading">Reading the icon</p>
     <ul id="legend"></ul>
@@ -23,6 +25,7 @@ export async function initSettings(container, storage, timetable, onChange = () 
   const status = container.querySelector('#status');
   const legend = container.querySelector('#legend');
   const watching = container.querySelector('#watching');
+  const saveButton = container.querySelector('#save');
 
   const { directions } = timetable;
   const { stop: saved, stops: savedStops = [], nearMinutes = DEFAULT_NEAR_MINUTES } = await storage.get(['stop', 'stops', 'nearMinutes']);
@@ -45,6 +48,7 @@ export async function initSettings(container, storage, timetable, onChange = () 
 
   renderStops();
   renderWatching();
+  saveButton.hidden = !multiple;
   renderLegend(nearMinutes);
   nearInput.value = nearMinutes;
   if (saved && !multiple) {
@@ -53,31 +57,45 @@ export async function initSettings(container, storage, timetable, onChange = () 
   }
 
   stopSelect.addEventListener('change', async () => {
-    if (!stopSelect.value) return;
-    const direction = selectedDirection();
-    const stop = { id: stopSelect.value, name: direction.stops.find((s) => s.id === stopSelect.value).name, direction: direction.name };
-    if (multiple) {
-      stopSelect.value = '';
-      await saveStops([...stops.filter((s) => !(s.id === stop.id && s.direction === stop.direction)), stop]);
-      status.textContent = `Added ${displayName(stop.name)}.`;
-    } else {
-      await storage.set({ stop });
-      status.textContent = `Saved. Watching ${displayName(stop.name)}.`;
-    }
+    if (multiple || !stopSelect.value) return;
+    const stop = selectedStop();
+    await storage.set({ stop });
+    status.textContent = `Saved. Watching ${displayName(stop.name)}.`;
     onChange();
   });
 
   nearInput.addEventListener('change', async () => {
-    const minutes = Math.round(nearInput.value);
-    if (!(minutes >= 1 && minutes <= 60)) return (nearInput.value = nearMinutes);
-    await storage.set({ nearMinutes: minutes });
+    const minutes = nearMinutesInput();
+    if (!minutes) return (nearInput.value = nearMinutes);
     renderLegend(minutes);
+    if (multiple) return;
+    await storage.set({ nearMinutes: minutes });
     status.textContent = `Saved. Flashing at ${minutes} min or less.`;
+    onChange();
+  });
+
+  saveButton.addEventListener('click', async () => {
+    if (!stopSelect.value) return (status.textContent = 'Choose a stop first.');
+    const stop = { ...selectedStop(), nearMinutes: nearMinutesInput() ?? nearMinutes };
+    stopSelect.value = '';
+    await saveStops([...stops.filter((s) => !(s.id === stop.id && s.direction === stop.direction)), stop]);
+    status.textContent = `Added ${displayName(stop.name)}.`;
     onChange();
   });
 
   function selectedDirection() {
     return directions[directionGroup.querySelector('input:checked').value];
+  }
+
+  function selectedStop() {
+    const direction = selectedDirection();
+    return { id: stopSelect.value, name: direction.stops.find((s) => s.id === stopSelect.value).name, direction: direction.name };
+  }
+
+  // Returns the whole minutes entered, or undefined if they're out of range.
+  function nearMinutesInput() {
+    const minutes = Math.round(nearInput.value);
+    if (minutes >= 1 && minutes <= 60) return minutes;
   }
 
   async function saveStops(newStops) {
@@ -98,7 +116,8 @@ export async function initSettings(container, storage, timetable, onChange = () 
           onChange();
         });
         const name = document.createElement('span');
-        name.append(displayName(stop.name), Object.assign(document.createElement('small'), { textContent: directionName(stop.direction) }));
+        const details = `${directionName(stop.direction)} · flashes at ${stop.nearMinutes ?? nearMinutes} min`;
+        name.append(displayName(stop.name), Object.assign(document.createElement('small'), { textContent: details }));
         const item = document.createElement('li');
         item.append(name, remove);
         return item;

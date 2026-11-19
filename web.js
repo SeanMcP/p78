@@ -37,7 +37,11 @@ setInterval(update, REFRESH_MS);
 async function update() {
   const [{ stops = [], nearMinutes }, feed] = await Promise.all([storage.get(['stops', 'nearMinutes']), FEED_URL ? fetchFeed(FEED_URL) : null]);
   // With no stops, one card prompts the user to choose one.
-  const cards = (stops.length ? stops : [undefined]).map((stop) => ({ stop, status: arrivalStatus({ feed, timetable, stop, nearMinutes }) }));
+  // Stops saved before each had its own flash time fall back to the old page-wide setting.
+  const cards = (stops.length ? stops : [undefined]).map((stop) => ({
+    stop,
+    status: arrivalStatus({ feed, timetable, stop, nearMinutes: stop?.nearMinutes ?? nearMinutes }),
+  }));
 
   stopAnimations.forEach((stopAnimation) => stopAnimation());
   arrivals.replaceChildren();

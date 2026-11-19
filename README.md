@@ -21,7 +21,7 @@ Click the icon to open your stop on PRT TrueTime. Right-click it to **Ignore** a
 
 ## Web page
 
-`index.html` is served by GitHub Pages and saves settings in your browser. Add as many stops as you like; the tab icon shows the first one.
+`index.html` is served by GitHub Pages and saves settings in your browser. Add as many stops as you like, each with its own flash time. The tab icon shows the first one.
 
 PRT's live feed blocks requests from websites, so the page reads it through a Cloudflare Worker that only answers `seanmcp.github.io` and `localhost`:
 

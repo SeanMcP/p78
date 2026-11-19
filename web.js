@@ -1,11 +1,12 @@
 import { arrivalStatus, fetchFeed, trueTimeUrl } from './extension/arrival.js';
-import { animateIcon, paintIcon } from './extension/icon.js';
+import { DEFAULT_NEAR_MINUTES, animateIcon, paintIcon } from './extension/icon.js';
 import { initSettings } from './extension/settings-form.js';
 
 // PRT's feed doesn't allow cross-origin requests, so the page reads it through the worker in worker/.
 // Leave empty to show scheduled times only.
 const FEED_URL = 'https://p78-feed.sean-128.workers.dev';
 const REFRESH_MS = 30_000;
+const ROUTE = 'P78';
 
 const storage = {
   async get(keys) {
@@ -31,6 +32,8 @@ let stopAnimations = [];
 let latestUpdate = 0;
 
 const timetable = await (await fetch('extension/stops.json')).json();
+const stopsFromUrl = readStopsFromUrl();
+if (stopsFromUrl) await storage.set({ stops: stopsFromUrl });
 await initSettings(document.getElementById('settings'), storage, timetable, update, { multiple: true });
 update();
 setInterval(update, REFRESH_MS);
@@ -40,6 +43,7 @@ async function update() {
   const [{ stops = [], nearMinutes }, feed] = await Promise.all([storage.get(['stops', 'nearMinutes']), FEED_URL ? fetchFeed(FEED_URL) : null]);
   // A newer update started while this one waited for the feed, so this one's settings may be out of date.
   if (thisUpdate !== latestUpdate) return;
+  writeStopsToUrl(stops, nearMinutes);
   // With no stops, one card prompts the user to choose one.
   // Stops saved before each had its own flash time fall back to the old page-wide setting.
   const cards = (stops.length ? stops : [undefined]).map((stop) => ({
@@ -68,4 +72,29 @@ async function update() {
     });
   });
   document.title = stops.length ? `${cards[0].status.label} · P78` : 'P78';
+}
+
+// The URL holds the saved stops too, so a bookmark or a shared link opens the same cards.
+// Format: ?stops=P78:0:20295:5,P78:1:21816:15 (route, direction index, stop ID, flash minutes).
+function readStopsFromUrl() {
+  const param = new URLSearchParams(location.search).get('stops');
+  if (param === null) return null;
+  return param.split(',').flatMap((entry) => {
+    const [route, directionIndex, id, minutes] = entry.split(':');
+    const direction = timetable.directions[directionIndex];
+    const stop = direction?.stops.find((s) => s.id === id);
+    if (route !== ROUTE || !stop) return [];
+    const nearMinutes = Math.round(minutes);
+    return [{ id, name: stop.name, direction: direction.name, nearMinutes: nearMinutes >= 1 && nearMinutes <= 60 ? nearMinutes : DEFAULT_NEAR_MINUTES }];
+  });
+}
+
+function writeStopsToUrl(stops, nearMinutes = DEFAULT_NEAR_MINUTES) {
+  const entries = stops.map((stop) => {
+    const directionIndex = timetable.directions.findIndex((d) => d.name === stop.direction);
+    return [ROUTE, directionIndex, stop.id, stop.nearMinutes ?? nearMinutes].join(':');
+  });
+  const url = new URL(location.href);
+  url.search = entries.length ? `?stops=${entries.join(',')}` : '';
+  history.replaceState(null, '', url);
 }

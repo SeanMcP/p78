@@ -1,13 +1,25 @@
-// Builds the extension's static logo PNGs: "P78" in the pixel font, in black and gold.
+// Builds the extension's static logo PNGs: a pixel-art bus in gold on black.
 // Usage: node scripts/build-icons.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { GLYPH_HEIGHT, forEachPixel, textWidth } from '../extension/pixel-font.js';
 
-const LABEL = 'P78';
+// Front view.
+const BUS = [
+  '..########..',
+  '.##########.',
+  '.#........#.',
+  '##........##',
+  '.#........#.',
+  '.#........#.',
+  '.##########.',
+  '.#.######.#.',
+  '.##########.',
+  '.##########.',
+  '..##....##..',
+];
 const BACKGROUND = [0, 0, 0, 255];
-const TEXT = [0xf3, 0xb5, 0x00, 255];
+const BUS_COLOR = [0xf3, 0xb5, 0x00, 255];
 
 function render(size) {
   const pixels = new Uint8Array(size * size * 4);
@@ -22,15 +34,20 @@ function render(size) {
     }
   }
 
-  const padding = Math.round(size * 0.15);
-  const width = textWidth(LABEL);
+  // Scale by whole pixels so the bus stays crisp: 1x at 16px, 3x at 48px, 8x at 128px.
+  const padding = Math.round(size * 0.1);
+  const width = BUS[0].length;
   const scale = Math.max(1, Math.floor((size - padding * 2) / width));
   const left = Math.floor((size - width * scale) / 2);
-  const top = Math.floor((size - GLYPH_HEIGHT * scale) / 2);
-  forEachPixel(LABEL, (gx, gy) => {
-    for (let y = 0; y < scale; y++) {
-      for (let x = 0; x < scale; x++) set(left + gx * scale + x, top + gy * scale + y, TEXT);
-    }
+  // Center the bus without its bottom row. The wheels are light, so a truly centered bus looks too high.
+  const top = Math.floor((size - (BUS.length - 1) * scale) / 2);
+  BUS.forEach((row, gy) => {
+    [...row].forEach((pixel, gx) => {
+      if (pixel !== '#') return;
+      for (let y = 0; y < scale; y++) {
+        for (let x = 0; x < scale; x++) set(left + gx * scale + x, top + gy * scale + y, BUS_COLOR);
+      }
+    });
   });
   return pixels;
 }

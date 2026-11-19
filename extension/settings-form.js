@@ -1,4 +1,4 @@
-// The settings form, shared by the extension's options dialog and the web page.
+// The settings form in the extension's options dialog.
 // `storage` has the chrome.storage.sync shape: get(keys) and set(items), both async.
 // With `multiple`, a Save button adds stops, each with its own flash time, to a list in `stops`.
 // Without it, changes save as soon as they're made to `stop` and `nearMinutes`.

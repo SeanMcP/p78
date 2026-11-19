@@ -3,35 +3,117 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>P78</title>
-    <link id="favicon" rel="icon" href="extension/icons/48.png" />
-    <link rel="stylesheet" href="extension/options.css" />
-    <link rel="stylesheet" href="web.css" />
+    <title>PGH Stop Watch</title>
+    <link rel="icon" href="extension/icons/48.png" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --page: #f5f5f5;
+        --card: #ffffff;
+        --border: #dddddd;
+        --muted: #5f6368;
+        --link: #7a5c00;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #0d0d0d;
+          --card: #1a1a1a;
+          --border: #333333;
+          --muted: #9aa0a6;
+          --link: #f3b500;
+        }
+      }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        font: 16px/1.5 system-ui, sans-serif;
+      }
+
+      main {
+        max-width: 36rem;
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.1rem;
+      }
+
+      section {
+        margin-top: 1rem;
+        padding: 1.25rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+
+      section > :first-child {
+        margin-top: 0;
+      }
+
+      section > :last-child {
+        margin-bottom: 0;
+      }
+
+      a {
+        color: var(--link);
+      }
+
+      .notice {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+    </style>
   </head>
   <body>
     <main>
       <header>
         <img src="extension/icons/48.png" alt="" width="40" height="40" />
-        <h1>P78</h1>
+        <h1>PGH Stop Watch</h1>
       </header>
 
-      <div id="arrivals" aria-live="polite"></div>
-      <template id="arrival">
-        <section class="arrival">
-          <canvas width="256" height="256"></canvas>
-          <div>
-            <p class="title"></p>
-            <p class="detail"></p>
-            <a class="truetime" hidden>Open on PRT TrueTime</a>
-          </div>
-        </section>
-      </template>
+      <section>
+        <p>A Chrome extension that counts down to the next Pittsburgh bus at your stop, right in your toolbar.</p>
+        <p>
+          It's in development and not on the Chrome Web Store yet. To try it, follow the steps in the
+          <a href="https://github.com/SeanMcP/p78#chrome-extension">README</a>.
+        </p>
+      </section>
+
+      <section id="privacy">
+        <h2>Privacy policy</h2>
+        <p>The extension doesn't collect personal data, use analytics, or show ads.</p>
+        <ul>
+          <li>It saves your stop and your settings in Chrome's storage, which Chrome may sync to your other devices.</li>
+          <li>It downloads live bus arrivals from Pittsburgh Regional Transit's public feed. Those requests don't include anything about you.</li>
+        </ul>
+        <p>Questions? <a href="https://github.com/SeanMcP/p78/issues">Open an issue</a>.</p>
+      </section>
 
       <section>
-        <h2>Settings</h2>
-        <div id="settings"></div>
+        <h2>Data</h2>
+        <p class="notice">
+          Reproduced with permission granted by Pittsburgh Regional Transit (PRT). The information has been provided by
+          means of a nonexclusive, limited, and revocable license granted by PRT. PRT does not guarantee the accuracy,
+          adequacy, completeness, or usefulness of any information. PRT provides this information "as is" without warranty
+          of any kind, express or implied, including, but not limited to, warranties of merchantability or fitness for a
+          particular purpose and assumes no responsibility for anyone's use of the information.
+        </p>
       </section>
     </main>
-    <script type="module" src="web.js"></script>
   </body>
 </html>

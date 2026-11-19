@@ -1,4 +1,4 @@
-// Turns live and scheduled data into what the icon shows. Shared by the extension and the web page.
+// Turns live and scheduled data into what the icon shows.
 import { arrivalsAt } from './gtfs-realtime.js';
 import { nextScheduled } from './schedule.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS } from './icon.js';

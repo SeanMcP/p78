@@ -1,9 +1,6 @@
 # P78
 
-Counts down to the next PRT P78 bus at your stop. It comes in two forms that share the same code:
-
-- **Chrome extension:** the toolbar icon shows the countdown.
-- **Web page** at [seanmcp.github.io/p78](https://seanmcp.github.io/p78/): the page and its tab icon show the countdown.
+A Chrome extension that counts down to the next PRT P78 bus at your stop in the toolbar.
 
 | Icon | Meaning |
 | --- | --- |
@@ -19,17 +16,9 @@ Counts down to the next PRT P78 bus at your stop. It comes in two forms that sha
 
 Click the icon to open your stop on PRT TrueTime. Right-click it to **Ignore** a bus you won't catch: the countdown turns grey and stops flashing. Choose **Watch** to undo it.
 
-## Web page
+## Landing page
 
-`index.html` is served by GitHub Pages and saves settings in your browser. Add as many stops as you like, each with its own flash time. The tab icon shows the first one. The URL holds your stops, so you can bookmark it or open it on another device.
-
-PRT's live feed blocks requests from websites, so the page reads it through a Cloudflare Worker that only answers `seanmcp.github.io` and `localhost`:
-
-```sh
-cd worker && pnpm dlx wrangler deploy
-```
-
-Put the worker's URL in `FEED_URL` in `web.js`. Without it, the page shows scheduled times only.
+`index.html` is served by GitHub Pages at [seanmcp.github.io/p78](https://seanmcp.github.io/p78/). It has the privacy policy and PRT's data notice.
 
 ## Data
 

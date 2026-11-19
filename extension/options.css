@@ -52,6 +52,25 @@ select {
   font: inherit;
 }
 
+#watching {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+#watching li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+#watching small {
+  display: block;
+  color: var(--muted);
+}
+
 .inline {
   display: flex;
   align-items: center;

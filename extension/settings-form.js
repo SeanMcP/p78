@@ -1,12 +1,14 @@
 // The settings form, shared by the extension's options dialog and the web page.
 // `storage` has the chrome.storage.sync shape: get(keys) and set(items), both async.
+// With `multiple`, it saves a list of stops in `stops` instead of one in `stop`.
 import { displayName } from './arrival.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS, paintIcon } from './icon.js';
 
-export async function initSettings(container, storage, timetable, onChange = () => {}) {
+export async function initSettings(container, storage, timetable, onChange = () => {}, { multiple = false } = {}) {
   container.innerHTML = `
+    <ul id="watching"></ul>
     <fieldset id="direction"><legend>Direction</legend></fieldset>
-    <label for="stop" class="heading">Stop</label>
+    <label for="stop" class="heading">${multiple ? 'Add a stop' : 'Stop'}</label>
     <select id="stop"></select>
     <label class="inline">
       Flash when the bus is <input id="near" type="number" min="1" max="60" /> minutes away or less
@@ -20,13 +22,15 @@ export async function initSettings(container, storage, timetable, onChange = () 
   const nearInput = container.querySelector('#near');
   const status = container.querySelector('#status');
   const legend = container.querySelector('#legend');
+  const watching = container.querySelector('#watching');
 
   const { directions } = timetable;
-  const { stop: saved, nearMinutes = DEFAULT_NEAR_MINUTES } = await storage.get(['stop', 'nearMinutes']);
-  const savedDirection = Math.max(0, directions.findIndex((d) => d.name === saved?.direction));
+  const { stop: saved, stops: savedStops = [], nearMinutes = DEFAULT_NEAR_MINUTES } = await storage.get(['stop', 'stops', 'nearMinutes']);
+  let stops = savedStops;
+  const lastDirection = (multiple ? stops.at(-1) : saved)?.direction;
+  const savedDirection = Math.max(0, directions.findIndex((d) => d.name === lastDirection));
 
   directions.forEach((direction, i) => {
-    const [heading, destination] = direction.name.split('-');
     const input = Object.assign(document.createElement('input'), {
       type: 'radio',
       name: 'direction',
@@ -35,14 +39,15 @@ export async function initSettings(container, storage, timetable, onChange = () 
     });
     input.addEventListener('change', renderStops);
     const label = document.createElement('label');
-    label.append(input, `${displayName(heading)} to ${displayName(destination)}`);
+    label.append(input, directionName(direction.name));
     directionGroup.append(label);
   });
 
   renderStops();
+  renderWatching();
   renderLegend(nearMinutes);
   nearInput.value = nearMinutes;
-  if (saved) {
+  if (saved && !multiple) {
     stopSelect.value = saved.id;
     status.textContent = `Watching ${displayName(saved.name)}.`;
   }
@@ -51,8 +56,14 @@ export async function initSettings(container, storage, timetable, onChange = () 
     if (!stopSelect.value) return;
     const direction = selectedDirection();
     const stop = { id: stopSelect.value, name: direction.stops.find((s) => s.id === stopSelect.value).name, direction: direction.name };
-    await storage.set({ stop });
-    status.textContent = `Saved. Watching ${displayName(stop.name)}.`;
+    if (multiple) {
+      stopSelect.value = '';
+      await saveStops([...stops.filter((s) => !(s.id === stop.id && s.direction === stop.direction)), stop]);
+      status.textContent = `Added ${displayName(stop.name)}.`;
+    } else {
+      await storage.set({ stop });
+      status.textContent = `Saved. Watching ${displayName(stop.name)}.`;
+    }
     onChange();
   });
 
@@ -67,6 +78,32 @@ export async function initSettings(container, storage, timetable, onChange = () 
 
   function selectedDirection() {
     return directions[directionGroup.querySelector('input:checked').value];
+  }
+
+  async function saveStops(newStops) {
+    stops = newStops;
+    await storage.set({ stops });
+    renderWatching();
+  }
+
+  function renderWatching() {
+    watching.hidden = !multiple || !stops.length;
+    watching.replaceChildren(
+      ...stops.map((stop) => {
+        const remove = Object.assign(document.createElement('button'), { type: 'button', textContent: 'Remove' });
+        remove.setAttribute('aria-label', `Remove ${displayName(stop.name)}`);
+        remove.addEventListener('click', async () => {
+          await saveStops(stops.filter((s) => s !== stop));
+          status.textContent = `Removed ${displayName(stop.name)}.`;
+          onChange();
+        });
+        const name = document.createElement('span');
+        name.append(displayName(stop.name), Object.assign(document.createElement('small'), { textContent: directionName(stop.direction) }));
+        const item = document.createElement('li');
+        item.append(name, remove);
+        return item;
+      }),
+    );
   }
 
   function renderStops() {
@@ -92,4 +129,9 @@ export async function initSettings(container, storage, timetable, onChange = () 
       }),
     );
   }
+}
+
+function directionName(name) {
+  const [heading, destination] = name.split('-');
+  return `${displayName(heading)} to ${displayName(destination)}`;
 }

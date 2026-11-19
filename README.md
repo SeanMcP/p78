@@ -33,6 +33,8 @@ Put the worker's URL in `FEED_URL` in `web.js`. Without it, the page shows sched
 
 ## Data
 
+> Reproduced with permission granted by Pittsburgh Regional Transit (PRT). The information has been provided by means of a nonexclusive, limited, and revocable license granted by PRT. PRT does not guarantee the accuracy, adequacy, completeness, or usefulness of any information. PRT provides this information "as is" without warranty of any kind, express or implied, including, but not limited to, warranties of merchantability or fitness for a particular purpose and assumes no responsibility for anyone's use of the information.
+
 Live arrivals come from PRT's public [GTFS-Realtime feed](https://truetime.rideprt.org/gtfsrt-bus/trips). Stops and schedules come from PRT's [GTFS data](https://www.rideprt.org/developerresources/GTFS.zip), bundled in `extension/stops.json`. The current schedule data runs through Feb 20, 2027. When PRT publishes a new schedule, download and unzip it, then run:
 
 ```sh

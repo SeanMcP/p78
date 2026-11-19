@@ -18,6 +18,7 @@ export async function initSettings(container, storage, timetable, onChange = () 
     <p id="status" role="status"></p>
     <p class="heading">Reading the icon</p>
     <ul id="legend"></ul>
+    <p id="notice"></p>
   `;
   const directionGroup = container.querySelector('#direction');
   const stopSelect = container.querySelector('#stop');
@@ -26,6 +27,7 @@ export async function initSettings(container, storage, timetable, onChange = () 
   const legend = container.querySelector('#legend');
   const watching = container.querySelector('#watching');
   const saveButton = container.querySelector('#save');
+  container.querySelector('#notice').textContent = timetable.notice;
 
   const { directions } = timetable;
   const { stop: saved, stops: savedStops = [], nearMinutes = DEFAULT_NEAR_MINUTES } = await storage.get(['stop', 'stops', 'nearMinutes']);

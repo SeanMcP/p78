@@ -4,6 +4,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROUTE = 'P78';
+// PRT's Developer License Agreement (¶7) requires this notice on everything made from its data.
+// https://www.rideprt.org/policies/developer-license-agreement/
+const NOTICE =
+  'Reproduced with permission granted by Pittsburgh Regional Transit (PRT). The information has been provided by means of a nonexclusive, limited, and revocable license granted by PRT. PRT does not guarantee the accuracy, adequacy, completeness, or usefulness of any information. PRT provides this information "as is" without warranty of any kind, express or implied, including, but not limited to, warranties of merchantability or fitness for a particular purpose and assumes no responsibility for anyone\'s use of the information.';
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const dir = process.argv[2];
 
@@ -74,5 +78,5 @@ for (const d of readCsv('calendar_dates.txt')) {
 }
 
 const out = path.join(import.meta.dirname, '../extension/stops.json');
-fs.writeFileSync(out, JSON.stringify({ services, directions: Object.values(directions) }) + '\n');
+fs.writeFileSync(out, JSON.stringify({ notice: NOTICE, services, directions: Object.values(directions) }) + '\n');
 console.log(`Wrote ${out}`);

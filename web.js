@@ -4,7 +4,7 @@ import { initSettings } from './extension/settings-form.js';
 
 // PRT's feed doesn't allow cross-origin requests, so the page reads it through the worker in worker/.
 // Leave empty to show scheduled times only.
-const FEED_URL = '';
+const FEED_URL = 'https://p78-feed.sean-128.workers.dev';
 const REFRESH_MS = 30_000;
 
 const storage = {

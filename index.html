@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>P78</title>
+    <link id="favicon" rel="icon" href="extension/icons/48.png" />
+    <link rel="stylesheet" href="extension/options.css" />
+    <link rel="stylesheet" href="web.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="extension/icons/48.png" alt="" width="40" height="40" />
+        <h1>P78</h1>
+      </header>
+
+      <section class="arrival" aria-live="polite">
+        <canvas id="icon" width="256" height="256"></canvas>
+        <div>
+          <p id="heading"></p>
+          <p id="detail"></p>
+          <a id="truetime" hidden>Open on PRT TrueTime</a>
+        </div>
+      </section>
+
+      <section>
+        <h2>Settings</h2>
+        <div id="settings"></div>
+      </section>
+    </main>
+    <script type="module" src="web.js"></script>
+  </body>
+</html>

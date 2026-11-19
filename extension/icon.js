@@ -1,16 +1,16 @@
 import { GLYPH_HEIGHT, forEachPixel, textWidth } from './pixel-font.js';
 
-// PRT brand colors.
-const NAVY = '#012f3c';
+// Pittsburgh's black and gold.
+const BLACK = '#000000';
 const GOLD = '#f3b500';
 
 export const DEFAULT_NEAR_MINUTES = 10;
 
 export const LEVELS = {
-  none: { background: NAVY, text: '#7f97a0' },
-  scheduled: { background: '#d5dee1', text: NAVY },
-  far: { background: NAVY, text: GOLD },
-  near: { background: GOLD, text: NAVY, flash: { background: NAVY, text: GOLD } },
+  none: { background: BLACK, text: '#8a8a8a' },
+  scheduled: { background: '#d9d9d9', text: BLACK },
+  far: { background: BLACK, text: GOLD },
+  near: { background: GOLD, text: BLACK, flash: { background: BLACK, text: GOLD } },
 };
 
 const FLASH_MS = 500;

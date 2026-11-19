@@ -1,4 +1,4 @@
-// Builds the extension's static logo PNGs: "P78" in the pixel font, in PRT's navy and gold.
+// Builds the extension's static logo PNGs: "P78" in the pixel font, in black and gold.
 // Usage: node scripts/build-icons.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,7 +6,7 @@ import zlib from 'node:zlib';
 import { GLYPH_HEIGHT, forEachPixel, textWidth } from '../extension/pixel-font.js';
 
 const LABEL = 'P78';
-const BACKGROUND = [0x01, 0x2f, 0x3c, 255];
+const BACKGROUND = [0, 0, 0, 255];
 const TEXT = [0xf3, 0xb5, 0x00, 255];
 
 function render(size) {

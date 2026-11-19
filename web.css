@@ -1,18 +1,17 @@
 /* Page layout around the shared settings form (styled by extension/options.css). */
 :root {
-  --navy: #012f3c;
   --gold: #f3b500;
   --page: #f5f7f8;
   --card: #ffffff;
   --border: #dde4e6;
-  --link: #01607a;
+  --link: #7a5c00;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --page: #0b1a20;
-    --card: #12262e;
-    --border: #22404a;
+    --page: #0d0d0d;
+    --card: #1a1a1a;
+    --border: #333333;
     --link: var(--gold);
   }
 }

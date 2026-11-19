@@ -8,7 +8,7 @@ Counts down to the next PRT P78 bus at your stop. It comes in two forms that sha
 | Icon | Meaning |
 | --- | --- |
 | Light grey | Scheduled; the bus isn't tracked live yet |
-| Navy | Live, far away |
+| Black | Live, far away |
 | Gold, flashing | Live, near (you set the minutes; default 10) |
 
 ## Chrome extension

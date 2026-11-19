@@ -12,9 +12,9 @@ A Chrome extension that counts down to the next PRT P78 bus at your stop in the 
 
 1. Open `chrome://extensions` and turn on Developer mode.
 2. Click **Load unpacked** and choose the `extension` folder.
-3. Pick your direction and stop.
+3. Save up to 4 stops, each with an optional name and its own flash time.
 
-Click the icon to open your stop on PRT TrueTime. Right-click it to **Ignore** a bus you won't catch: the countdown turns grey and stops flashing. Choose **Watch** to undo it.
+The icon shows one stop at a time. Right-click it to switch stops, or to **Ignore** a bus you won't catch: the countdown turns grey and stops flashing. Choose **Watch** to undo it. Click the icon to open the stop on PRT TrueTime.
 
 ## Landing page
 

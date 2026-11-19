@@ -4,6 +4,8 @@ import { nextScheduled } from './schedule.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS } from './icon.js';
 
 const ROUTE = 'P78';
+// With "Ignore this bus", this fills five of the six items Chrome allows in the icon's right-click menu.
+export const MAX_STOPS = 4;
 
 // Returns the feed's bytes, or null if it couldn't be fetched.
 export async function fetchFeed(url) {
@@ -68,4 +70,18 @@ export function displayName(stopName) {
     .toLowerCase()
     .replace(/\b[a-z]/g, (c) => c.toUpperCase())
     .replace(/\b(Ns|Fs)\b/g, (s) => s.toUpperCase());
+}
+
+// Identifies a saved stop. The same stop ID can be saved in both directions.
+export function stopKey(stop) {
+  return `${stop.direction}:${stop.id}`;
+}
+
+export function stopLabel(stop) {
+  return stop.label || displayName(stop.name);
+}
+
+export function directionName(name) {
+  const [heading, destination] = name.split('-');
+  return `${displayName(heading)} to ${displayName(destination)}`;
 }

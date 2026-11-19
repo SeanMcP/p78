@@ -6,8 +6,36 @@
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
-    <div id="settings"></div>
-    <p class="hint">Click the icon to open your stop on PRT TrueTime.</p>
+    <p class="hint">The icon counts down to the next bus at one of your stops. Right-click it to switch stops. Click it to open the stop on PRT TrueTime.</p>
+
+    <section>
+      <h2>Reading the icon</h2>
+      <ul id="legend"></ul>
+    </section>
+
+    <section>
+      <h2>Your stops <span id="count"></span></h2>
+      <p id="empty">No stops yet. Add one below.</p>
+      <ul id="watching"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Add a stop</h2>
+      <fieldset id="direction"><legend>Direction</legend></fieldset>
+      <label for="stop">Stop</label>
+      <select id="stop"></select>
+      <label for="name">Name <span class="optional">(optional)</span></label>
+      <input id="name" type="text" maxlength="20" placeholder="Home" />
+      <label class="inline">
+        Flash at <input id="near" type="number" min="1" max="60" /> minutes or less
+      </label>
+      <div class="actions">
+        <button id="save" type="button">Save stop</button>
+        <p id="status" role="status"></p>
+      </div>
+    </section>
+
+    <p id="notice"></p>
     <script type="module" src="options.js"></script>
   </body>
 </html>

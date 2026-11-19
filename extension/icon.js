@@ -35,13 +35,19 @@ export function paintIcon(ctx, size, label, { background, text }) {
   ctx.fill();
 
   // Scale the font by whole pixels so it stays crisp, keeping some padding around it.
-  const padding = Math.round(size * 0.15);
-  const room = size - padding * 2;
-  const width = textWidth(label);
-  const scale = Math.max(1, Math.min(Math.floor(room / width), Math.floor(room / GLYPH_HEIGHT)));
-  const left = Math.floor((size - width * scale) / 2);
+  const roomX = size - Math.round(size * 0.1) * 2;
+  const roomY = size - Math.round(size * 0.15) * 2;
+  const glyphWidth = textWidth(label);
+  const scale = Math.max(1, Math.min(Math.floor(roomX / glyphWidth), Math.floor(roomY / GLYPH_HEIGHT)));
+
+  // Text can only be exactly centered when the leftover space is even. For two-character labels,
+  // widening the gap by one pixel gets there.
+  const extraPixel = label.length === 2 && (size - glyphWidth * scale) % 2 === 1 ? 1 : 0;
+  const gap = 1 + extraPixel / scale;
+  const width = glyphWidth * scale + extraPixel;
+  const left = Math.floor((size - width) / 2);
   const top = Math.floor((size - GLYPH_HEIGHT * scale) / 2);
 
   ctx.fillStyle = text;
-  forEachPixel(label, (x, y) => ctx.fillRect(left + x * scale, top + y * scale, scale, scale));
+  forEachPixel(label, (x, y) => ctx.fillRect(left + Math.round(x * scale), top + y * scale, scale, scale), gap);
 }

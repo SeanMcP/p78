@@ -144,8 +144,15 @@ select,
   font: inherit;
 }
 
-#save {
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-top: 14px;
+}
+
+#save {
+  flex: none;
   padding: 6px 16px;
   border: 0;
   border-radius: 6px;
@@ -161,8 +168,7 @@ select,
 }
 
 #status {
-  min-height: 1.4em;
-  margin: 8px 0 0;
+  margin: 0;
   color: var(--muted);
 }
 

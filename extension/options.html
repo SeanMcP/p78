@@ -9,6 +9,11 @@
     <p class="hint">The icon counts down to the next bus at one of your stops. Right-click it to switch stops. Click it to open the stop on PRT TrueTime.</p>
 
     <section>
+      <h2>Reading the icon</h2>
+      <ul id="legend"></ul>
+    </section>
+
+    <section>
       <h2>Your stops <span id="count"></span></h2>
       <p id="empty">No stops yet. Add one below.</p>
       <ul id="watching"></ul>
@@ -24,13 +29,10 @@
       <label class="inline">
         Flash at <input id="near" type="number" min="1" max="60" /> minutes or less
       </label>
-      <button id="save" type="button">Save stop</button>
-      <p id="status" role="status"></p>
-    </section>
-
-    <section>
-      <h2>Reading the icon</h2>
-      <ul id="legend"></ul>
+      <div class="actions">
+        <button id="save" type="button">Save stop</button>
+        <p id="status" role="status"></p>
+      </div>
     </section>
 
     <p id="notice"></p>

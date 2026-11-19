@@ -1,59 +1,60 @@
 :root {
   color-scheme: light dark;
   --muted: #5f6368;
+  --card: #f5f5f5;
+  --border: #dddddd;
+  --gold: #f3b500;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --muted: #9aa0a6;
+    --card: #2a2a2a;
+    --border: #3c3c3c;
   }
 }
 
 body {
   margin: 0;
-  padding: 4px 8px 8px;
+  padding: 4px 8px 12px;
   min-width: 360px;
   font: 14px/1.4 system-ui, sans-serif;
 }
 
-.heading,
-legend {
-  display: block;
-  margin: 16px 0 8px;
-  padding: 0;
+h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
 }
 
-fieldset {
+section {
+  margin-top: 20px;
+}
+
+.card {
+  padding: 12px 14px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.hint {
   margin: 0;
-  padding: 0;
-  border: 0;
+  color: var(--muted);
 }
 
-fieldset legend {
-  margin-top: 0;
+#count,
+.optional {
+  color: var(--muted);
+  font-weight: normal;
 }
 
-fieldset label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-}
-
-input[type='radio'] {
-  width: 16px;
-  height: 16px;
+#empty {
   margin: 0;
-}
-
-select {
-  width: 100%;
-  padding: 4px;
-  font: inherit;
+  color: var(--muted);
 }
 
 #watching {
-  margin: 0 0 16px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -63,7 +64,13 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+#watching li:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 
 #watching small {
@@ -71,11 +78,64 @@ select {
   color: var(--muted);
 }
 
+#watching button {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#watching button:hover {
+  color: inherit;
+}
+
+fieldset {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  margin-bottom: 4px;
+  padding: 0;
+}
+
+fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+input[type='radio'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.card > label:not(.inline) {
+  display: block;
+  margin: 12px 0 4px;
+}
+
+select,
+#name {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 5px 6px;
+  font: inherit;
+}
+
 .inline {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 #near {
@@ -85,20 +145,30 @@ select {
 }
 
 #save {
-  margin-top: 16px;
-  padding: 4px 16px;
+  margin-top: 14px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--gold);
+  color: #000000;
   font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#save:hover {
+  filter: brightness(1.05);
 }
 
 #status {
   min-height: 1.4em;
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
 }
 
 #legend {
   display: grid;
-  gap: 8px 16px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -118,12 +188,7 @@ select {
 }
 
 #notice {
-  margin: 16px 0 0;
+  margin: 20px 0 0;
   color: var(--muted);
-  font-size: 12px;
-}
-
-.hint {
-  margin: 16px 0 0;
-  color: var(--muted);
+  font-size: 11px;
 }

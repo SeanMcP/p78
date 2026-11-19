@@ -31,11 +31,11 @@ export function textWidth(text) {
 }
 
 // Calls fillPixel(x, y) for every lit pixel, in font units.
-export function forEachPixel(text, fillPixel) {
+export function forEachPixel(text, fillPixel, gap = 1) {
   let offset = 0;
   for (const char of text) {
     const rows = GLYPHS[char];
     rows.forEach((row, y) => [...row].forEach((pixel, x) => pixel === '#' && fillPixel(offset + x, y)));
-    offset += rows[0].length + 1;
+    offset += rows[0].length + gap;
   }
 }

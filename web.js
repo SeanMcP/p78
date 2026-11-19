@@ -16,33 +16,48 @@ const storage = {
   },
 };
 
-const iconCtx = document.getElementById('icon').getContext('2d');
+// The page used to watch a single `stop`.
+const { stop: legacyStop } = await storage.get(['stop']);
+if (legacyStop) {
+  await storage.set({ stops: [legacyStop] });
+  localStorage.removeItem('stop');
+}
+
 const faviconCanvas = Object.assign(document.createElement('canvas'), { width: 32, height: 32 });
 const favicon = document.getElementById('favicon');
-const heading = document.getElementById('heading');
-const detail = document.getElementById('detail');
-const trueTimeLink = document.getElementById('truetime');
-let stopAnimation = () => {};
+const arrivals = document.getElementById('arrivals');
+const arrivalTemplate = document.getElementById('arrival');
+let stopAnimations = [];
 
 const timetable = await (await fetch('extension/stops.json')).json();
-await initSettings(document.getElementById('settings'), storage, timetable, update);
+await initSettings(document.getElementById('settings'), storage, timetable, update, { multiple: true });
 update();
 setInterval(update, REFRESH_MS);
 
 async function update() {
-  const [settings, feed] = await Promise.all([storage.get(['stop', 'nearMinutes']), FEED_URL ? fetchFeed(FEED_URL) : null]);
-  const status = arrivalStatus({ feed, timetable, ...settings });
+  const [{ stops = [], nearMinutes }, feed] = await Promise.all([storage.get(['stops', 'nearMinutes']), FEED_URL ? fetchFeed(FEED_URL) : null]);
+  // With no stops, one card prompts the user to choose one.
+  const cards = (stops.length ? stops : [undefined]).map((stop) => ({ stop, status: arrivalStatus({ feed, timetable, stop, nearMinutes }) }));
 
-  heading.textContent = status.heading;
-  detail.textContent = status.detail;
-  trueTimeLink.hidden = !settings.stop;
-  if (settings.stop) trueTimeLink.href = trueTimeUrl(settings.stop);
-  document.title = settings.stop ? `${status.label} · P78` : 'P78';
+  stopAnimations.forEach((stopAnimation) => stopAnimation());
+  arrivals.replaceChildren();
+  // The tab follows the first stop.
+  stopAnimations = cards.map(({ stop, status }, i) => {
+    const card = arrivalTemplate.content.cloneNode(true);
+    const iconCtx = card.querySelector('canvas').getContext('2d');
+    card.querySelector('.title').textContent = status.heading;
+    card.querySelector('.detail').textContent = status.detail;
+    const trueTimeLink = card.querySelector('.truetime');
+    trueTimeLink.hidden = !stop;
+    if (stop) trueTimeLink.href = trueTimeUrl(stop);
+    arrivals.append(card);
 
-  stopAnimation();
-  stopAnimation = animateIcon(status.level, (colors) => {
-    paintIcon(iconCtx, 256, status.label, colors);
-    paintIcon(faviconCanvas.getContext('2d'), 32, status.label, colors);
-    favicon.href = faviconCanvas.toDataURL();
+    return animateIcon(status.level, (colors) => {
+      paintIcon(iconCtx, 256, status.label, colors);
+      if (i > 0) return;
+      paintIcon(faviconCanvas.getContext('2d'), 32, status.label, colors);
+      favicon.href = faviconCanvas.toDataURL();
+    });
   });
+  document.title = stops.length ? `${cards[0].status.label} · P78` : 'P78';
 }

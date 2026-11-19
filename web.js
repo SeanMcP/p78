@@ -28,6 +28,7 @@ const favicon = document.getElementById('favicon');
 const arrivals = document.getElementById('arrivals');
 const arrivalTemplate = document.getElementById('arrival');
 let stopAnimations = [];
+let latestUpdate = 0;
 
 const timetable = await (await fetch('extension/stops.json')).json();
 await initSettings(document.getElementById('settings'), storage, timetable, update, { multiple: true });
@@ -35,7 +36,10 @@ update();
 setInterval(update, REFRESH_MS);
 
 async function update() {
+  const thisUpdate = ++latestUpdate;
   const [{ stops = [], nearMinutes }, feed] = await Promise.all([storage.get(['stops', 'nearMinutes']), FEED_URL ? fetchFeed(FEED_URL) : null]);
+  // A newer update started while this one waited for the feed, so this one's settings may be out of date.
+  if (thisUpdate !== latestUpdate) return;
   // With no stops, one card prompts the user to choose one.
   const cards = (stops.length ? stops : [undefined]).map((stop) => ({ stop, status: arrivalStatus({ feed, timetable, stop, nearMinutes }) }));
 

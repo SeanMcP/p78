@@ -8,6 +8,8 @@ A Chrome extension that counts down to the next PRT P78 bus at your stop in the 
 | Black | Live, far away |
 | Gold, flashing | Live, near (you set the minutes; default 10) |
 
+Live arrivals come from PRT's feed, about 390 KB per download. To keep that load down, the extension downloads it at most once a minute, only while a bus is scheduled within the next 30 minutes (or up to 15 minutes ago, in case it's late), and only while you're using the computer. The rest of the time the icon counts down to the scheduled time.
+
 ## Chrome extension
 
 1. Open `chrome://extensions` and turn on Developer mode.

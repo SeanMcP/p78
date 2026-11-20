@@ -6,6 +6,7 @@
   "permissions": [
     "alarms",
     "contextMenus",
+    "idle",
     "storage"
   ],
   "host_permissions": [

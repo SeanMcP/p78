@@ -1,13 +1,18 @@
-import { arrivalStatus, displayName, fetchFeed, stopKey, trueTimeUrl } from './arrival.js';
+import { arrivalStatus, displayName, fetchFeed, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
 import { animateIcon, paintIcon } from './icon.js';
 
 const FEED_URL = 'https://truetime.rideprt.org/gtfsrt-bus/trips';
-const REFRESH_MINUTES = 0.5;
+const REFRESH_MINUTES = 1;
+// The computer counts as idle after this long without input. Locked always counts.
+const IDLE_SECONDS = 5 * 60;
+// Reuse a feed fetched this recently, so changing a setting or ignoring a bus doesn't fetch again.
+const FEED_REUSE_MS = 55 * 1000;
 
 const timetable = fetch(chrome.runtime.getURL('stops.json')).then((response) => response.json());
 let stopAnimation = () => {};
 let lastStatus;
 let lastMenu;
+let lastFeed = { bytes: null, fetchedAt: 0 };
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   // Before saved stops, the extension saved one `stop` and a shared `nearMinutes`.
@@ -22,6 +27,11 @@ chrome.runtime.onStartup.addListener(update);
 chrome.runtime.onInstalled.addListener(update);
 chrome.alarms.onAlarm.addListener(update);
 chrome.storage.onChanged.addListener(update);
+chrome.idle.setDetectionInterval(IDLE_SECONDS);
+// Refresh as soon as the computer is in use again, instead of waiting for the next alarm.
+chrome.idle.onStateChanged.addListener((state) => {
+  if (state === 'active') update();
+});
 chrome.contextMenus.onClicked.addListener(async ({ menuItemId }) => {
   if (menuItemId.startsWith('stop:')) return chrome.storage.sync.set({ activeStop: menuItemId.slice('stop:'.length) });
 
@@ -46,12 +56,15 @@ async function savedStops() {
 }
 
 async function update() {
-  const [{ stops, stop }, { ignoredTrips }, feed] = await Promise.all([
+  const [{ stops, stop }, { ignoredTrips }, idleState, schedule] = await Promise.all([
     savedStops(),
     chrome.storage.session.get('ignoredTrips'),
-    fetchFeed(FEED_URL),
+    chrome.idle.queryState(IDLE_SECONDS),
+    timetable,
   ]);
-  const status = arrivalStatus({ feed, timetable: await timetable, ignoredTrips, stop, nearMinutes: stop?.nearMinutes });
+  const liveChecked = shouldFetchLive({ idleState, timetable: schedule, stop });
+  const feed = liveChecked ? await recentFeed() : null;
+  const status = arrivalStatus({ feed, liveChecked, timetable: schedule, ignoredTrips, stop, nearMinutes: stop?.nearMinutes });
   const { label, level, heading, detail } = status;
   lastStatus = status;
 
@@ -60,6 +73,13 @@ async function update() {
   stopAnimation();
   stopAnimation = animateIcon(level, (colors) => chrome.action.setIcon({ imageData: iconImages(label, colors) }));
   return status;
+}
+
+async function recentFeed() {
+  if (lastFeed.bytes && Date.now() - lastFeed.fetchedAt < FEED_REUSE_MS) return lastFeed.bytes;
+  const bytes = await fetchFeed(FEED_URL);
+  lastFeed = { bytes, fetchedAt: Date.now() };
+  return bytes;
 }
 
 // The icon's right-click menu: the saved stops to switch between, then "Ignore this bus".

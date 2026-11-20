@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pgh-stop-watch-arrivals",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  // Runs once a minute. Clients read the R2 file through the cache, so the worker has no routes.
+  "triggers": { "crons": ["* * * * *"] },
+  "workers_dev": false,
+  "r2_buckets": [{ "binding": "ARRIVALS", "bucket_name": "pgh-stop-watch" }],
+  "observability": { "enabled": true }
+}

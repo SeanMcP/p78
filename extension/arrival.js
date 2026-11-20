@@ -3,8 +3,8 @@ import { arrivalsAt } from './gtfs-realtime.js';
 import { nextScheduled } from './schedule.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS } from './icon.js';
 
-// The only route so far. Saved stops will get their own route when the extension supports every route.
-export const ROUTE = 'P78';
+// Stops saved before the extension supported every route were all on P78, and have no `route`.
+export const DEFAULT_ROUTE = 'P78';
 // With "Ignore this bus" and "Pause updates", this fills the six items Chrome allows in the icon's right-click menu.
 export const MAX_STOPS = 4;
 // Live data is fetched only when a bus is scheduled from LATE_MINUTES ago to AHEAD_MINUTES from now.
@@ -44,9 +44,9 @@ export function shouldFetchLive({ idleState, timetable, stop, now = Date.now() /
 // `liveChecked` is false when the feed wasn't fetched because no bus is due soon or the computer is idle.
 export function arrivalStatus({ feed, liveChecked = true, timetable, stop, nearMinutes = DEFAULT_NEAR_MINUTES, ignoredTrips = [], now = Date.now() / 1000 }) {
   if (!stop) return { label: '?', level: LEVELS.none, heading: 'P78', detail: 'Choose a stop' };
-  const heading = `P78 at ${displayName(stop.name)}`;
+  const heading = `${routeOf(stop)} at ${displayName(stop.name)}`;
 
-  const live = liveArrivals(feed, stop.id, now);
+  const live = liveArrivals(feed, stop, now);
   if (live?.length) {
     const minutesUntil = ({ time }) => Math.max(0, Math.round((time - now) / 60));
     const [next] = live;
@@ -79,10 +79,10 @@ export function arrivalStatus({ feed, liveChecked = true, timetable, stop, nearM
 
 // Live arrivals at a stop, or null if there's no feed or it can't be decoded, so the icon falls back to the
 // schedule instead of failing.
-function liveArrivals(feed, stopId, now) {
+function liveArrivals(feed, stop, now) {
   if (!feed) return null;
   try {
-    return arrivalsAt(feed, ROUTE, stopId).filter(({ time }) => time >= now - 30);
+    return arrivalsAt(feed, routeOf(stop), stop.id).filter(({ time }) => time >= now - 30);
   } catch {
     return null;
   }
@@ -91,7 +91,7 @@ function liveArrivals(feed, stopId, now) {
 export function trueTimeUrl(stop) {
   const feed = 'Port Authority Bus:';
   const params = new URLSearchParams({
-    route: feed + ROUTE,
+    route: feed + routeOf(stop),
     direction: feed + stop.direction.split('-')[0],
     id: feed + stop.id,
     showAllBusses: 'on',
@@ -107,9 +107,28 @@ export function displayName(stopName) {
     .replace(/\b(Ns|Fs)\b/g, (s) => s.toUpperCase());
 }
 
-// Identifies a saved stop. The same stop ID can be saved in both directions.
+export function routeOf(stop) {
+  return stop.route ?? DEFAULT_ROUTE;
+}
+
+// Identifies a saved stop. The same stop ID can be saved in both directions, and on more than one route.
 export function stopKey(stop) {
-  return `${stop.direction}:${stop.id}`;
+  return `${routeOf(stop)}:${stop.direction}:${stop.id}`;
+}
+
+// Gives stops saved before routes existed the route P78, and updates `activeStop`, which used to be a key
+// without the route. Returns null if nothing needs to change.
+export function migrateStops({ stops = [], activeStop }) {
+  if (stops.every((stop) => stop.route)) return null;
+  const migrated = stops.map((stop) => (stop.route ? stop : { ...stop, route: DEFAULT_ROUTE }));
+  const legacy = stops.find((stop) => !stop.route && `${stop.direction}:${stop.id}` === activeStop);
+  if (legacy) return { stops: migrated, activeStop: stopKey({ ...legacy, route: DEFAULT_ROUTE }) };
+  return { stops: migrated };
+}
+
+// The route and stop, for the right-click menu: "71A Home" or "71A Negley Av + Bryant St (Inbound)".
+export function menuTitle(stop) {
+  return `${routeOf(stop)} ${stop.label ? stop.label : `${displayName(stop.name)} (${displayName(stop.direction.split('-')[0])})`}`;
 }
 
 export function stopLabel(stop) {

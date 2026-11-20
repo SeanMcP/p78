@@ -3,7 +3,8 @@ import { arrivalsAt } from './gtfs-realtime.js';
 import { nextScheduled } from './schedule.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS } from './icon.js';
 
-const ROUTE = 'P78';
+// The only route so far. Saved stops will get their own route when the extension supports every route.
+export const ROUTE = 'P78';
 // With "Ignore this bus" and "Pause updates", this fills the six items Chrome allows in the icon's right-click menu.
 export const MAX_STOPS = 4;
 // Live data is fetched only when a bus is scheduled from LATE_MINUTES ago to AHEAD_MINUTES from now.
@@ -22,8 +23,9 @@ export async function fetchFeed(url) {
   }
 }
 
+// `timetable` is null when the schedule couldn't be loaded.
 function timetableStop(timetable, stop) {
-  return timetable.directions.find((d) => d.name === stop.direction)?.stops.find((s) => s.id === stop.id);
+  return timetable?.directions.find((d) => d.name === stop.direction)?.stops.find((s) => s.id === stop.id);
 }
 
 // Whether to fetch PRT's feed now. Each fetch downloads the whole feed (about 390 KB) from PRT, so the
@@ -60,6 +62,7 @@ export function arrivalStatus({ feed, liveChecked = true, timetable, stop, nearM
     };
   }
 
+  if (!timetable) return { label: '–', level: LEVELS.none, heading, detail: `Schedule unavailable${live ? '' : '; live data unavailable'}` };
   const scheduledStop = timetableStop(timetable, stop);
   const time = scheduledStop && nextScheduled(timetable, scheduledStop, now);
   if (!time) return { label: '–', level: LEVELS.none, heading, detail: 'No buses scheduled' };

@@ -31,7 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git add data extension/stops.json
+          git add data
           if git diff --cached --quiet; then
             echo "Schedule data is unchanged."
             exit 0

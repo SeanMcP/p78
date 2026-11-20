@@ -1,14 +1,13 @@
 // Builds schedule data for each PRT bus route from PRT's static GTFS feed:
 //   data/routes.json            each route's ID, name, and directions
 //   data/routes/<route>.json    one route's stops, schedules, and service calendars
-// It also copies P78's file to extension/stops.json, which the extension bundles.
+// GitHub Pages serves them, and the extension downloads the files for the routes it needs.
 // Usage: node scripts/build-stops.mjs path/to/unzipped/GTFS
 import fs from 'node:fs';
 import path from 'node:path';
 
 // GTFS route_type for buses. Light rail and the inclines aren't in the bus live feed.
 const BUS = '3';
-const BUNDLED_ROUTE = 'P78';
 // PRT's Developer License Agreement (¶7) requires this notice on everything made from its data.
 // https://www.rideprt.org/policies/developer-license-agreement/
 const NOTICE =
@@ -117,5 +116,4 @@ for (const route of routes) {
   index.push({ id: route.route_id, name: route.route_long_name, directions: schedule.directions.map((d) => d.name) });
 }
 writeJson('data/routes.json', { notice: NOTICE, routes: index });
-fs.copyFileSync(path.join(root, `data/routes/${BUNDLED_ROUTE}.json`), path.join(root, 'extension/stops.json'));
-console.log(`Wrote ${index.length} routes to data/ and ${BUNDLED_ROUTE} to extension/stops.json`);
+console.log(`Wrote ${index.length} routes to data/`);

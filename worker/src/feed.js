@@ -3,7 +3,11 @@
 
 const FEED_URL = 'https://truetime.rideprt.org/gtfsrt-bus/trips';
 export const FEED_KEY = 'v1/trips.pb';
-const FETCH_TIMEOUT_MS = 20_000;
+// From Cloudflare, about a quarter of connections to PRT's server time out (HTTP 522 after about 19 s), so
+// each run tries twice with a shorter timeout. The worst case, about 22 s, fits well inside the minute.
+const ATTEMPTS = 2;
+const FETCH_TIMEOUT_MS = 10_000;
+const RETRY_DELAY_MS = 2_000;
 // Below one cron interval, so a cached copy is never more than about two minutes old.
 const CACHE_SECONDS = 30;
 
@@ -73,14 +77,28 @@ async function fetchFeed() {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-// If PRT fails or sends something that isn't a whole feed, this throws without writing, so the last good
-// copy stays. Clients read the feed's own timestamp, see it grow old, and fall back to scheduled times.
-export async function copyFeed(bucket) {
-  const bytes = await fetchFeed();
-  const { feedTime, entities } = checkFeed(bytes);
+// Fetches and checks the feed, trying again once if PRT fails or sends something that isn't a whole feed.
+async function fetchCheckedFeed({ attempts = ATTEMPTS, retryDelayMs = RETRY_DELAY_MS } = {}) {
+  const errors = [];
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const bytes = await fetchFeed();
+      return { bytes, attempt, retriedAfter: errors, ...checkFeed(bytes) };
+    } catch (error) {
+      errors.push(error.message);
+      if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  }
+  throw new Error(`PRT feed failed ${attempts} times: ${errors.join('; ')}`);
+}
+
+// If every attempt fails, this throws without writing, so the last good copy stays. Clients read the
+// feed's own timestamp, see it grow old, and fall back to scheduled times.
+export async function copyFeed(bucket, options) {
+  const { bytes, feedTime, entities, attempt, retriedAfter } = await fetchCheckedFeed(options);
   await bucket.put(FEED_KEY, bytes, {
     httpMetadata: { contentType: 'application/x-protobuf', cacheControl: `public, max-age=${CACHE_SECONDS}` },
     customMetadata: { feedTime: String(feedTime) },
   });
-  return { feedTime, entities, bytes: bytes.length };
+  return { feedTime, entities, bytes: bytes.length, attempt, ...(retriedAfter.length && { retriedAfter }) };
 }

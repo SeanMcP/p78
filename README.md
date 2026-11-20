@@ -24,7 +24,7 @@ The icon shows one stop at a time. Right-click it to switch stops, or to **Ignor
 
 `worker/` is a Cloudflare Worker that runs once a minute. It fetches PRT's GTFS-Realtime feed, so PRT gets one request each minute for all users, and copies it unchanged to R2 as `v1/trips.pb`. The copy is served at `https://pghstopwatch.smcp.dev/v1/trips.pb` through the Cloudflare cache.
 
-The extension decodes the feed itself (`extension/gtfs-realtime.js`). Decoding every route in the worker took 34–56 ms of CPU, and the Workers free plan allows 10 ms. If PRT fails or sends a feed that is cut off, the worker keeps the last good copy; clients read the feed's header timestamp and treat a copy more than 3 minutes old as unavailable. The `v1/` path stays stable for released extension versions.
+The extension decodes the feed itself (`extension/gtfs-realtime.js`). Decoding every route in the worker took 34–56 ms of CPU, and the Workers free plan allows 10 ms. If PRT fails or sends a feed that is cut off, the worker tries once more, then keeps the last good copy; clients read the feed's header timestamp and treat a copy more than 3 minutes old as unavailable. The `v1/` path stays stable for released extension versions.
 
 ```sh
 pnpm test     # extension decoder and worker tests, from the repository root

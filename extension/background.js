@@ -1,5 +1,6 @@
-import { arrivalStatus, displayName, fetchFeed, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
+import { ROUTE, arrivalStatus, displayName, fetchFeed, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
 import { animateIcon, paintIcon } from './icon.js';
+import { loadTimetable } from './timetables.js';
 
 const FEED_URL = 'https://truetime.rideprt.org/gtfsrt-bus/trips';
 const REFRESH_MINUTES = 1;
@@ -8,7 +9,6 @@ const IDLE_SECONDS = 5 * 60;
 // Reuse a feed fetched this recently, so changing a setting or ignoring a bus doesn't fetch again.
 const FEED_REUSE_MS = 55 * 1000;
 
-const timetable = fetch(chrome.runtime.getURL('stops.json')).then((response) => response.json());
 let stopAnimation = () => {};
 let lastStatus;
 let lastMenu;
@@ -60,7 +60,7 @@ async function update() {
     savedStops(),
     chrome.storage.session.get('ignoredTrips'),
     chrome.idle.queryState(IDLE_SECONDS),
-    timetable,
+    loadTimetable(ROUTE),
   ]);
   const liveChecked = shouldFetchLive({ idleState, timetable: schedule, stop });
   const feed = liveChecked ? await recentFeed() : null;

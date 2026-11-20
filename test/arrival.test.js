@@ -66,3 +66,16 @@ test('fetches live data for a stop missing from the timetable, and not without a
   assert.equal(shouldFetchLive({ idleState: 'active', timetable, stop: unknown, now: at(6, 0) }), true);
   assert.equal(shouldFetchLive({ idleState: 'active', timetable, stop: undefined, now: at(12, 20) }), false);
 });
+
+test('without a schedule, still shows live buses, and says the schedule is unavailable otherwise', () => {
+  const bytes = feed(NOW, [{ tripId: 't1', routeId: 'P78', stops: [{ stopId: 'A', arrival: NOW + 300 }] }]);
+  assert.equal(arrivalStatus({ feed: bytes, timetable: null, stop, now: NOW }).label, '5');
+  const status = arrivalStatus({ feed: null, timetable: null, stop, now: NOW });
+  assert.equal(status.label, '–');
+  assert.match(status.detail, /Schedule unavailable/);
+});
+
+test('fetches live data when the schedule could not be loaded', () => {
+  assert.equal(shouldFetchLive({ idleState: 'active', timetable: null, stop, now: at(6, 0) }), true);
+  assert.equal(shouldFetchLive({ idleState: 'idle', timetable: null, stop, now: at(6, 0) }), false);
+});

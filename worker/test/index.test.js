@@ -1,8 +1,8 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/index.js';
-import { FEED_KEY, headerTimestamp } from '../src/feed.js';
-import { feed } from '../../test/protobuf.js';
+import { FEED_KEY, checkFeed } from '../src/feed.js';
+import { feed, fixed32, fixed64, number, string } from '../../test/protobuf.js';
 
 const FEED_TIME = 1_800_000_000;
 const realFetch = globalThis.fetch;
@@ -17,14 +17,13 @@ function fakeBucket() {
 
 const controller = { scheduledTime: (FEED_TIME + 20) * 1000 };
 
-// A feed big enough to pass the size check, like PRT's real one.
-function bigFeed(timestamp = FEED_TIME) {
+function bigFeed(timestamp = FEED_TIME, options) {
   const trips = Array.from({ length: 50 }, (_, i) => ({
     tripId: `trip-${i}`,
     routeId: 'P78',
     stops: [{ stopId: `stop-${i}`, arrival: FEED_TIME + i * 60 }],
   }));
-  return feed(timestamp, trips);
+  return feed(timestamp, trips, options);
 }
 
 test('copies the feed unchanged, with cache headers', async (t) => {
@@ -53,20 +52,40 @@ test('keeps the last good copy when PRT returns an error', async () => {
 test('keeps the last good copy when PRT sends something that is not a feed', async () => {
   globalThis.fetch = async () => new Response(`<html>${'Maintenance '.repeat(200)}</html>`);
   const env = { ARRIVALS: fakeBucket() };
-  await assert.rejects(worker.scheduled(controller, env), /header/);
+  await assert.rejects(worker.scheduled(controller, env));
   assert.equal(env.ARRIVALS.writes.length, 0);
 });
 
-test('keeps the last good copy when the feed is nearly empty', async () => {
+test('keeps the last good copy when the feed is cut off, even with a valid header', async () => {
+  const bytes = bigFeed();
+  globalThis.fetch = async () => new Response(bytes.subarray(0, Math.floor(bytes.length / 2)));
+  const env = { ARRIVALS: fakeBucket() };
+  await assert.rejects(worker.scheduled(controller, env), /Truncated/);
+  assert.equal(env.ARRIVALS.writes.length, 0);
+});
+
+test('keeps the last good copy when the feed has no entities', async () => {
   globalThis.fetch = async () => new Response(feed(FEED_TIME, []));
   const env = { ARRIVALS: fakeBucket() };
-  await assert.rejects(worker.scheduled(controller, env), /only \d+ bytes/);
+  await assert.rejects(worker.scheduled(controller, env), /no entities/);
   assert.equal(env.ARRIVALS.writes.length, 0);
 });
 
-test('reads the header timestamp without decoding the rest', () => {
-  assert.equal(headerTimestamp(bigFeed()), FEED_TIME);
-  assert.throws(() => headerTimestamp(bigFeed(null)), /no header timestamp/);
+test('rejects a feed with no header timestamp', () => {
+  assert.throws(() => checkFeed(bigFeed(null)), /no header timestamp/);
+});
+
+test('rejects a feed cut off at any byte inside an entity', () => {
+  const bytes = bigFeed();
+  for (let cut = bytes.length - 1; cut > bytes.length - 40; cut--) {
+    assert.throws(() => checkFeed(bytes.subarray(0, cut)), /Truncated/, `cut at ${cut}`);
+  }
+});
+
+test('accepts any header field order, fixed-width header extensions, and a header after the entities', () => {
+  const header = [...fixed64(1001), ...number(3, FEED_TIME), ...fixed32(1000), ...string(1, '2.0')];
+  assert.deepEqual(checkFeed(bigFeed(FEED_TIME, { header })), { feedTime: FEED_TIME, entities: 50 });
+  assert.deepEqual(checkFeed(bigFeed(FEED_TIME, { headerLast: true })), { feedTime: FEED_TIME, entities: 50 });
 });
 
 test('the entry module has only a default export, since Workers treat named exports as entrypoints', async () => {

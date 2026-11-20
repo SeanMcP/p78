@@ -1,7 +1,9 @@
 // Minimal GTFS-Realtime decoder: reads only the fields needed for arrival times.
 // Field numbers come from https://gtfs.org/documentation/realtime/proto/
 
-const CANCELED = 3; // TripDescriptor.ScheduleRelationship
+// TripDescriptor.ScheduleRelationship values for trips that riders must not be shown.
+const CANCELED = 3;
+const DELETED = 7;
 const SKIPPED = 1; // StopTimeUpdate.ScheduleRelationship
 const NO_DATA = 2;
 
@@ -35,10 +37,9 @@ function* readFields(bytes) {
       if (pos + length > bytes.length) throw new Error('Truncated field');
       yield [field, bytes.subarray(pos, pos + length)];
       pos += length;
-    } else if (wireType === 1) {
-      pos += 8;
-    } else if (wireType === 5) {
-      pos += 4;
+    } else if (wireType === 1 || wireType === 5) {
+      pos += wireType === 1 ? 8 : 4;
+      if (pos > bytes.length) throw new Error('Truncated field');
     } else {
       throw new Error(`Unsupported protobuf wire type ${wireType}`);
     }
@@ -64,7 +65,9 @@ export function feedTime(feedBytes) {
 }
 
 // Returns { tripId, time } for each bus on a route arriving at a stop, soonest first. Times are Unix seconds.
-// Canceled trips and skipped stops are left out.
+// A trip that passes the stop twice, as on a loop, appears once for each visit. Canceled and deleted trips
+// are left out, and so are skipped stops. Stops with NO_DATA are left out too, so they get no live time
+// rather than a wrong one. Throws if the feed is truncated or malformed.
 export function arrivalsAt(feedBytes, routeId, stopId) {
   const arrivals = [];
   for (const [field, entity] of readFields(feedBytes)) {
@@ -73,14 +76,14 @@ export function arrivalsAt(feedBytes, routeId, stopId) {
       if (entityField !== 3) continue;
       let tripId;
       let route;
-      let canceled = false;
-      let time;
+      let removed = false;
+      const times = [];
       for (const [tripField, value] of readFields(tripUpdate)) {
         if (tripField === 1) {
           for (const [descriptorField, descriptorValue] of readFields(value)) {
             if (descriptorField === 1) tripId = text.decode(descriptorValue);
             else if (descriptorField === 5) route = text.decode(descriptorValue);
-            else if (descriptorField === 4 && descriptorValue === CANCELED) canceled = true;
+            else if (descriptorField === 4 && (descriptorValue === CANCELED || descriptorValue === DELETED)) removed = true;
           }
         } else if (tripField === 2) {
           let stop;
@@ -93,10 +96,11 @@ export function arrivalsAt(feedBytes, routeId, stopId) {
             else if (updateField === 3) departure = readEventTime(updateValue);
             else if (updateField === 5) relationship = updateValue;
           }
-          if (stop === stopId && relationship !== SKIPPED && relationship !== NO_DATA) time = arrival ?? departure;
+          const time = arrival ?? departure;
+          if (stop === stopId && time && relationship !== SKIPPED && relationship !== NO_DATA) times.push(time);
         }
       }
-      if (route === routeId && !canceled && time) arrivals.push({ tripId, time });
+      if (route === routeId && !removed) for (const time of times) arrivals.push({ tripId, time });
     }
   }
   return arrivals.sort((a, b) => a.time - b.time);

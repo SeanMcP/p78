@@ -3,9 +3,9 @@ name: Tests
 on:
   push:
     branches: [master]
-    paths: [extension/**, worker/**, test/**, package.json, .github/workflows/test.yml]
+    paths: [extension/**, test/**, package.json, .github/workflows/test.yml]
   pull_request:
-    paths: [extension/**, worker/**, test/**, package.json, .github/workflows/test.yml]
+    paths: [extension/**, test/**, package.json, .github/workflows/test.yml]
 
 jobs:
   test:

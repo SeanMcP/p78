@@ -1,0 +1,8 @@
+{
+  "name": "pgh-stop-watch",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js worker/test/*.test.js"
+  }
+}

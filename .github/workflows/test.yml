@@ -1,0 +1,19 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+    paths: [extension/**, worker/**, test/**, package.json, .github/workflows/test.yml]
+  pull_request:
+    paths: [extension/**, worker/**, test/**, package.json, .github/workflows/test.yml]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # The tests use only Node's built-in runner, so there is nothing to install.
+      - run: npm test

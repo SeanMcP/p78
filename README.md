@@ -20,20 +20,16 @@ The icon shows one stop at a time. Right-click it to switch stops, or to **Ignor
 
 `index.html` is served by GitHub Pages at [seanmcp.github.io/p78](https://seanmcp.github.io/p78/). It has the privacy policy and PRT's data notice.
 
-## Arrivals worker
+## Feed worker
 
-`worker/` is a Cloudflare Worker that runs once a minute. It fetches PRT's GTFS-Realtime feed, so PRT gets one request each minute for all users, and writes the arrivals to R2 as `v1/arrivals.json`:
+`worker/` is a Cloudflare Worker that runs once a minute. It fetches PRT's GTFS-Realtime feed, so PRT gets one request each minute for all users, and copies it unchanged to R2 as `v1/trips.pb`. The copy is served at `https://pghstopwatch.smcp.dev/v1/trips.pb` through the Cloudflare cache.
 
-```json
-{ "version": 1, "feedTime": 1795174122, "routes": { "P78": { "1407": [["1399020", 1609]] } } }
-```
-
-Each stop lists `[tripId, seconds after feedTime]`, soonest first. Canceled trips and skipped stops are left out. If PRT fails, the worker keeps the last good file, so clients treat a `feedTime` more than 3 minutes old as unavailable. The `v1/` path stays stable for released extension versions.
+The extension decodes the feed itself (`extension/gtfs-realtime.js`). Decoding every route in the worker took 35–55 ms of CPU, and the Workers free plan allows 10 ms. If PRT fails, the worker keeps the last good copy; clients read the feed's header timestamp and treat a copy more than 3 minutes old as unavailable. The `v1/` path stays stable for released extension versions.
 
 ```sh
+npm test      # extension decoder and worker tests, from the repository root
 cd worker
 npm install
-npm test
 npm run dev   # then open http://localhost:8787/__scheduled to run the cron once
 ```
 

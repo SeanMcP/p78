@@ -38,7 +38,7 @@ A review (commit f51a271) made the worker reject feeds that were cut off partway
 
 - **The complexity outgrew the benefit.** The worker existed to spare PRT load. By this point it needed a domain, an R2 bucket, a cache rule, monitoring, and possibly a second worker, and it still failed a quarter of the time.
 - **Fetching directly works.** Users' own connections reach PRT reliably, and the 522 failures happen only from Cloudflare.
-- **The extension can reduce its own load.** #5 already plans to fetch only when the next bus is due within 30 minutes, to stop while the computer is idle or locked, and to refresh every 60 seconds instead of 30. With those, a typical user makes a few dozen requests a day rather than about 2,900.
+- **The extension can reduce its own load.** #5 already plans to fetch only when the next bus is due within 30 minutes, to stop while the computer is idle or locked, and to refresh every 60 seconds instead of 30. With those, a user makes roughly 60 to 480 requests a day rather than about 2,880. The low end is someone catching one bus each way on an infrequent route. The high end is someone whose route runs every 30 minutes or more often, with the computer in use for 8 hours.
 - **A public copy is a legal risk.** PRT's [TrueTime terms](https://truetime.rideprt.org/bustime/ta/PAAC/terms2.jsp) say that a copy of the information on a different website needs PRT's permission. The worker served exactly that. Fetching directly redistributes nothing.
 
 All the Cloudflare resources were deleted: the worker, the R2 bucket and its file, the custom domain, and the cache rule. The old `p78-feed` proxy worker went too. The `smcp.dev` zone stays on Cloudflare's free plan, with no records.

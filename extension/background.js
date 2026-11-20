@@ -1,4 +1,4 @@
-import { ROUTE, arrivalStatus, displayName, fetchFeed, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
+import { arrivalStatus, fetchFeed, menuTitle, migrateStops, routeOf, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
 import { animateIcon, paintIcon } from './icon.js';
 import { loadTimetable } from './timetables.js';
 
@@ -21,6 +21,9 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
     await chrome.storage.sync.set({ stops: [{ ...stop, nearMinutes }] });
     await chrome.storage.sync.remove(['stop', 'nearMinutes']);
   }
+  // Before every route, stops had no route; they were all on P78.
+  const migrated = migrateStops(await chrome.storage.sync.get(['stops', 'activeStop']));
+  if (migrated) await chrome.storage.sync.set(migrated);
   if (reason === 'install') chrome.runtime.openOptionsPage();
 });
 chrome.runtime.onStartup.addListener(update);
@@ -56,12 +59,12 @@ async function savedStops() {
 }
 
 async function update() {
-  const [{ stops, stop }, { ignoredTrips }, idleState, schedule] = await Promise.all([
+  const [{ stops, stop }, { ignoredTrips }, idleState] = await Promise.all([
     savedStops(),
     chrome.storage.session.get('ignoredTrips'),
     chrome.idle.queryState(IDLE_SECONDS),
-    loadTimetable(ROUTE),
   ]);
+  const schedule = stop ? await loadTimetable(routeOf(stop)) : null;
   const liveChecked = shouldFetchLive({ idleState, timetable: schedule, stop });
   const feed = liveChecked ? await recentFeed() : null;
   const status = arrivalStatus({ feed, liveChecked, timetable: schedule, ignoredTrips, stop, nearMinutes: stop?.nearMinutes });
@@ -89,7 +92,7 @@ function updateMenu(stops, activeStop, { tripId, ignored }) {
       id: `stop:${stopKey(stop)}`,
       type: 'radio',
       checked: stop === activeStop,
-      title: stop.label ? stop.label : `${displayName(stop.name)} (${displayName(stop.direction.split('-')[0])})`,
+      title: menuTitle(stop),
     })),
     { id: 'ignore', title: ignored ? 'Watch this bus' : 'Ignore this bus', enabled: Boolean(tripId) },
   ];

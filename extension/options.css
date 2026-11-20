@@ -95,8 +95,9 @@ section {
 
 fieldset {
   display: flex;
-  gap: 16px;
-  margin: 0;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 12px 0 0;
   padding: 0;
   border: 0;
 }
@@ -124,6 +125,7 @@ input[type='radio'] {
 }
 
 select,
+#route,
 #name {
   box-sizing: border-box;
   width: 100%;

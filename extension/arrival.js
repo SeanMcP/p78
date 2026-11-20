@@ -23,8 +23,8 @@ export function arrivalStatus({ feed, timetable, stop, nearMinutes = DEFAULT_NEA
   if (!stop) return { label: '?', level: LEVELS.none, heading: 'P78', detail: 'Choose a stop' };
   const heading = `P78 at ${displayName(stop.name)}`;
 
-  const live = feed ? arrivalsAt(feed, ROUTE, stop.id).filter(({ time }) => time >= now - 30) : [];
-  if (live.length) {
+  const live = liveArrivals(feed, stop.id, now);
+  if (live?.length) {
     const minutesUntil = ({ time }) => Math.max(0, Math.round((time - now) / 60));
     const [next] = live;
     const nextMinutes = minutesUntil(next);
@@ -49,8 +49,19 @@ export function arrivalStatus({ feed, timetable, stop, nearMinutes = DEFAULT_NEA
     label: minutes < 60 ? String(minutes) : `${Math.floor(minutes / 60)}h`,
     level: LEVELS.scheduled,
     heading,
-    detail: `Next scheduled: ${clock} (${feed ? 'not tracked live yet' : 'live data unavailable'})`,
+    detail: `Next scheduled: ${clock} (${live ? 'not tracked live yet' : 'live data unavailable'})`,
   };
+}
+
+// Live arrivals at a stop, or null if there's no feed or it can't be decoded, so the icon falls back to the
+// schedule instead of failing.
+function liveArrivals(feed, stopId, now) {
+  if (!feed) return null;
+  try {
+    return arrivalsAt(feed, ROUTE, stopId).filter(({ time }) => time >= now - 30);
+  } catch {
+    return null;
+  }
 }
 
 export function trueTimeUrl(stop) {

@@ -20,6 +20,16 @@ The icon shows one stop at a time. Right-click it to switch stops, or to **Ignor
 
 `index.html` is served by GitHub Pages at [seanmcp.github.io/p78](https://seanmcp.github.io/p78/). It has the privacy policy and PRT's data notice.
 
+## Tests
+
+```sh
+pnpm test
+```
+
+The tests cover the extension's feed decoder (`extension/gtfs-realtime.js`) and how the icon falls back to the schedule. They use Node's built-in test runner, so there is nothing to install.
+
+The extension fetches PRT's feed directly. [context.md](context.md) explains why there is no server in between: a Cloudflare Worker that copied the feed for all users was tried and removed.
+
 ## Data
 
 > Reproduced with permission granted by Pittsburgh Regional Transit (PRT). The information has been provided by means of a nonexclusive, limited, and revocable license granted by PRT. PRT does not guarantee the accuracy, adequacy, completeness, or usefulness of any information. PRT provides this information "as is" without warranty of any kind, express or implied, including, but not limited to, warranties of merchantability or fitness for a particular purpose and assumes no responsibility for anyone's use of the information.

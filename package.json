@@ -1,0 +1,9 @@
+{
+  "name": "pgh-stop-watch",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.18.0",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

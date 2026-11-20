@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { arrivalStatus, shouldFetchLive } from '../extension/arrival.js';
+import { arrivalStatus, menuTitle, migrateStops, routeOf, shouldFetchLive, stopKey, trueTimeUrl } from '../extension/arrival.js';
 import { feed } from './protobuf.js';
 
 // Noon local time, with one P78 bus scheduled at stop A every day at 12:30.
@@ -78,4 +78,51 @@ test('without a schedule, still shows live buses, and says the schedule is unava
 test('fetches live data when the schedule could not be loaded', () => {
   assert.equal(shouldFetchLive({ idleState: 'active', timetable: null, stop, now: at(6, 0) }), true);
   assert.equal(shouldFetchLive({ idleState: 'idle', timetable: null, stop, now: at(6, 0) }), false);
+});
+
+test('a stop with no route is on P78', () => {
+  assert.equal(routeOf(stop), 'P78');
+  assert.equal(routeOf({ ...stop, route: '71A' }), '71A');
+});
+
+test('shows live buses for the stop\'s own route only', () => {
+  const bytes = feed(NOW, [
+    { tripId: 'p78', routeId: 'P78', stops: [{ stopId: 'A', arrival: NOW + 120 }] },
+    { tripId: '71a', routeId: '71A', stops: [{ stopId: 'A', arrival: NOW + 600 }] },
+  ]);
+  const status = arrivalStatus({ feed: bytes, timetable, stop: { ...stop, route: '71A' }, now: NOW });
+  assert.equal(status.tripId, '71a');
+  assert.equal(status.label, '10');
+  assert.equal(status.heading, '71A at Stop A');
+});
+
+test('identifies a saved stop by route, direction, and stop', () => {
+  assert.equal(stopKey(stop), 'P78:INBOUND-DOWNTOWN:A');
+  assert.notEqual(stopKey({ ...stop, route: '71A' }), stopKey({ ...stop, route: '71B' }));
+});
+
+test('links to the stop on TrueTime for its route', () => {
+  const url = new URL(trueTimeUrl({ ...stop, route: '71A' }));
+  assert.equal(url.searchParams.get('route'), 'Port Authority Bus:71A');
+  assert.equal(url.searchParams.get('id'), 'Port Authority Bus:A');
+});
+
+test('puts the route first in the menu', () => {
+  assert.equal(menuTitle({ ...stop, route: '71A', label: 'Home' }), '71A Home');
+  assert.equal(menuTitle(stop), 'P78 Stop A (Inbound)');
+});
+
+test('gives stops saved before routes the route P78, and updates the active stop', () => {
+  const old = { id: 'A', name: 'STOP A', direction: 'INBOUND-DOWNTOWN', nearMinutes: 5 };
+  const other = { id: 'B', name: 'STOP B', direction: 'OUTBOUND-HARMAR' };
+  assert.deepEqual(migrateStops({ stops: [old, other], activeStop: 'OUTBOUND-HARMAR:B' }), {
+    stops: [{ ...old, route: 'P78' }, { ...other, route: 'P78' }],
+    activeStop: 'P78:OUTBOUND-HARMAR:B',
+  });
+  assert.deepEqual(migrateStops({ stops: [old] }), { stops: [{ ...old, route: 'P78' }] });
+});
+
+test('leaves stops that already have routes alone', () => {
+  assert.equal(migrateStops({ stops: [{ ...stop, route: '71A' }], activeStop: 'x' }), null);
+  assert.equal(migrateStops({}), null);
 });

@@ -1,5 +1,6 @@
-import { arrivalStatus, displayName, fetchFeed, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
+import { ROUTE, arrivalStatus, displayName, fetchFeed, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
 import { LEVELS, animateIcon, paintIcon } from './icon.js';
+import { loadTimetable } from './timetables.js';
 
 const FEED_URL = 'https://truetime.rideprt.org/gtfsrt-bus/trips';
 const REFRESH_MINUTES = 1;
@@ -9,7 +10,6 @@ const IDLE_SECONDS = 5 * 60;
 const FEED_REUSE_MS = 55 * 1000;
 const PAUSE_MS = 60 * 60 * 1000;
 
-const timetable = fetch(chrome.runtime.getURL('stops.json')).then((response) => response.json());
 let stopAnimation = () => {};
 let lastStatus;
 let lastMenu;
@@ -79,7 +79,7 @@ async function update() {
     savedStops(),
     chrome.storage.session.get('ignoredTrips'),
     chrome.idle.queryState(IDLE_SECONDS),
-    timetable,
+    loadTimetable(ROUTE),
     pausedUntil(),
   ]);
   const liveChecked = !paused && shouldFetchLive({ idleState, timetable: schedule, stop });

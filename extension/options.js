@@ -1,6 +1,7 @@
 // The options dialog. Save adds a stop, with its own name and flash time, to `stops` in chrome.storage.sync.
-import { MAX_STOPS, directionName, displayName, stopKey, stopLabel } from './arrival.js';
+import { MAX_STOPS, ROUTE, directionName, displayName, stopKey, stopLabel } from './arrival.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS, paintIcon } from './icon.js';
+import { loadTimetable } from './timetables.js';
 
 const directionGroup = document.querySelector('#direction');
 const stopSelect = document.querySelector('#stop');
@@ -12,9 +13,12 @@ const watching = document.querySelector('#watching');
 const count = document.querySelector('#count');
 const empty = document.querySelector('#empty');
 
-const timetable = await (await fetch('stops.json')).json();
-const { directions } = timetable;
-document.querySelector('#notice').textContent = timetable.notice;
+const timetable = await loadTimetable(ROUTE);
+// Without a schedule there are no directions or stops to choose from, but saved stops can still be removed.
+const directions = timetable?.directions ?? [];
+document.querySelector('#notice').textContent = timetable?.notice ?? '';
+document.querySelector('#save').disabled = !timetable;
+if (!timetable) status.textContent = "Couldn't load the bus schedule. Check your connection, then reopen this page.";
 let { stops = [] } = await chrome.storage.sync.get('stops');
 const lastDirection = Math.max(0, directions.findIndex((d) => d.name === stops.at(-1)?.direction));
 
@@ -102,7 +106,7 @@ function renderWatching() {
 function renderStops() {
   stopSelect.replaceChildren(
     new Option('Choose a stop…', ''),
-    ...selectedDirection().stops.map((s) => new Option(displayName(s.name), s.id)),
+    ...(timetable ? selectedDirection().stops.map((s) => new Option(displayName(s.name), s.id)) : []),
   );
 }
 

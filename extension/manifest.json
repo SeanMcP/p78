@@ -10,6 +10,7 @@
     "storage"
   ],
   "host_permissions": [
+    "https://seanmcp.github.io/p78/*",
     "https://truetime.rideprt.org/*"
   ],
   "background": {

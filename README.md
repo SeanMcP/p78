@@ -40,7 +40,7 @@ Live arrivals come from PRT's public [GTFS-Realtime feed](https://truetime.ridep
 
 - `data/routes.json` lists every bus route and its directions.
 - `data/routes/<route>.json` has one route's stops, schedules, and service calendars. GitHub Pages serves these at `seanmcp.github.io/p78/data/`.
-- `extension/stops.json` is a copy of P78's file, bundled in the extension.
+- The extension downloads the files for the routes it shows, and keeps them for up to 12 hours.
 
 The [Update schedule data](.github/workflows/schedule-data.yml) action rebuilds these files daily and commits them when PRT's schedule changes. To build them yourself, download and unzip the GTFS data, then run:
 

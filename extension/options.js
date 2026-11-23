@@ -1,41 +1,43 @@
-// The options dialog. Save adds a stop, with its own name and flash time, to `stops` in chrome.storage.sync.
-import { MAX_STOPS, ROUTE, directionName, displayName, stopKey, stopLabel } from './arrival.js';
+// The options dialog. Save adds a stop, with its route, its own name, and flash time, to `stops` in
+// chrome.storage.sync.
+import { DEFAULT_ROUTE, MAX_STOPS, directionName, displayName, routeOf, stopKey, stopLabel } from './arrival.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS, paintIcon } from './icon.js';
-import { loadTimetable } from './timetables.js';
+import { loadRoutes, loadTimetable, pruneTimetables } from './timetables.js';
 
+const routeInput = document.querySelector('#route');
+const routeList = document.querySelector('#routes');
 const directionGroup = document.querySelector('#direction');
 const stopSelect = document.querySelector('#stop');
 const nameInput = document.querySelector('#name');
 const nearInput = document.querySelector('#near');
+const saveButton = document.querySelector('#save');
 const status = document.querySelector('#status');
 const legend = document.querySelector('#legend');
 const watching = document.querySelector('#watching');
 const count = document.querySelector('#count');
 const empty = document.querySelector('#empty');
 
-const timetable = await loadTimetable(ROUTE);
-// Without a schedule there are no directions or stops to choose from, but saved stops can still be removed.
-const directions = timetable?.directions ?? [];
-document.querySelector('#notice').textContent = timetable?.notice ?? '';
-document.querySelector('#save').disabled = !timetable;
-if (!timetable) status.textContent = "Couldn't load the bus schedule. Check your connection, then reopen this page.";
 let { stops = [] } = await chrome.storage.sync.get('stops');
-const lastDirection = Math.max(0, directions.findIndex((d) => d.name === stops.at(-1)?.direction));
+// Schedules looked at here are cached; drop the ones for routes no saved stop uses.
+pruneTimetables(stops.map(routeOf));
 
-directions.forEach((direction, i) => {
-  const input = Object.assign(document.createElement('input'), {
-    type: 'radio',
-    name: 'direction',
-    value: i,
-    checked: i === lastDirection,
-  });
-  input.addEventListener('change', renderStops);
-  const label = document.createElement('label');
-  label.append(input, directionName(direction.name));
-  directionGroup.append(label);
+const routeIndex = await loadRoutes();
+const routes = routeIndex?.routes ?? [];
+document.querySelector('#notice').textContent = routeIndex?.notice ?? '';
+// The route shown, its timetable, and a counter so a slow download can't replace a newer choice.
+let route;
+let timetable = null;
+let loading = 0;
+
+routeList.replaceChildren(...routes.map((r) => Object.assign(document.createElement('option'), { value: r.id, label: displayName(r.name) })));
+// Load a route when it's picked from the list, or typed and confirmed with Enter or by leaving the field.
+// Ignore other typing, so typing "71A" doesn't load route 7 on the way.
+routeInput.addEventListener('input', (event) => {
+  if (event.inputType === 'insertReplacementText' || event.inputType === undefined) showRoute(routeInput.value);
 });
-
-renderStops();
+routeInput.addEventListener('change', () => {
+  if (routeInput.value !== route?.id) showRoute(routeInput.value);
+});
 renderWatching();
 renderLegend(DEFAULT_NEAR_MINUTES);
 nearInput.value = DEFAULT_NEAR_MINUTES;
@@ -46,7 +48,7 @@ nearInput.addEventListener('change', () => {
   renderLegend(minutes);
 });
 
-document.querySelector('#save').addEventListener('click', async () => {
+saveButton.addEventListener('click', async () => {
   if (!stopSelect.value) return (status.textContent = 'Choose a stop first.');
   const stop = { ...selectedStop(), nearMinutes: nearMinutesInput() ?? DEFAULT_NEAR_MINUTES };
   const label = nameInput.value.trim();
@@ -57,16 +59,80 @@ document.querySelector('#save').addEventListener('click', async () => {
   stopSelect.value = '';
   nameInput.value = '';
   await saveStops(existing < 0 ? [...stops, stop] : stops.with(existing, stop));
-  status.textContent = `${existing < 0 ? 'Added' : 'Updated'} ${stopLabel(stop)}.`;
+  status.textContent = `${existing < 0 ? 'Added' : 'Updated'} ${stop.route} ${stopLabel(stop)}.`;
 });
 
+// Start with the route of the most recently saved stop.
+if (routeIndex) {
+  showRoute(stops.length ? routeOf(stops.at(-1)) : DEFAULT_ROUTE);
+} else {
+  routeInput.disabled = true;
+  showTimetable(null);
+  status.textContent = "Couldn't load the bus routes. Check your connection, then reopen this page.";
+}
+
+// Finds a route by what's typed: its ID ("71a"), or its name if exactly one route has that name.
+function findRoute(text) {
+  const query = text.trim().toLowerCase();
+  if (!query) return;
+  const byName = routes.filter((r) => r.name.toLowerCase() === query);
+  return routes.find((r) => r.id.toLowerCase() === query) ?? (byName.length === 1 ? byName[0] : undefined);
+}
+
+async function showRoute(text) {
+  const found = findRoute(text);
+  const request = ++loading;
+  if (!found) {
+    route = undefined;
+    showTimetable(null);
+    if (text.trim()) status.textContent = `No route matches “${text.trim()}”. Choose one from the list.`;
+    return;
+  }
+  route = found;
+  routeInput.value = found.id;
+  // The previous route's stops stay on screen until this one loads, so Save can't pair them with this route.
+  saveButton.disabled = true;
+  status.textContent = `Loading route ${found.id}…`;
+  const loaded = await loadTimetable(found.id);
+  if (request !== loading) return;
+  showTimetable(loaded);
+  status.textContent = loaded ? '' : `Couldn't load route ${found.id}. Check your connection, then try again.`;
+}
+
+// Shows the directions and stops for `loaded`, or empties them when there's no timetable.
+function showTimetable(loaded) {
+  const previous = timetable && selectedDirection()?.name;
+  timetable = loaded;
+  saveButton.disabled = !timetable;
+  const directions = timetable?.directions ?? [];
+  // Keep the direction chosen before, if this route has one with the same name, or the last saved stop's.
+  const preferred = [previous, stops.at(-1)?.direction].map((name) => directions.findIndex((d) => d.name === name)).find((i) => i >= 0) ?? 0;
+  directionGroup.replaceChildren(
+    directionGroup.querySelector('legend'),
+    ...directions.map((direction, i) => {
+      const input = Object.assign(document.createElement('input'), { type: 'radio', name: 'direction', value: i, checked: i === preferred });
+      input.addEventListener('change', renderStops);
+      const label = document.createElement('label');
+      label.append(input, directionName(direction.name));
+      return label;
+    }),
+  );
+  renderStops();
+}
+
 function selectedDirection() {
-  return directions[directionGroup.querySelector('input:checked').value];
+  const checked = directionGroup.querySelector('input:checked');
+  return checked && timetable?.directions[checked.value];
 }
 
 function selectedStop() {
   const direction = selectedDirection();
-  return { id: stopSelect.value, name: direction.stops.find((s) => s.id === stopSelect.value).name, direction: direction.name };
+  return {
+    route: route.id,
+    id: stopSelect.value,
+    name: direction.stops.find((s) => s.id === stopSelect.value).name,
+    direction: direction.name,
+  };
 }
 
 // Returns the whole minutes entered, or undefined if they're out of range.
@@ -88,12 +154,17 @@ function renderWatching() {
   watching.replaceChildren(
     ...stops.map((stop) => {
       const remove = Object.assign(document.createElement('button'), { type: 'button', textContent: 'Remove' });
-      remove.setAttribute('aria-label', `Remove ${stopLabel(stop)}`);
+      remove.setAttribute('aria-label', `Remove ${routeOf(stop)} ${stopLabel(stop)}`);
       remove.addEventListener('click', async () => {
         await saveStops(stops.filter((s) => s !== stop));
-        status.textContent = `Removed ${stopLabel(stop)}.`;
+        status.textContent = `Removed ${routeOf(stop)} ${stopLabel(stop)}.`;
       });
-      const details = [stop.label && displayName(stop.name), directionName(stop.direction), `flashes at ${stop.nearMinutes ?? DEFAULT_NEAR_MINUTES} min`];
+      const details = [
+        routeOf(stop),
+        stop.label && displayName(stop.name),
+        directionName(stop.direction),
+        `flashes at ${stop.nearMinutes ?? DEFAULT_NEAR_MINUTES} min`,
+      ];
       const name = document.createElement('span');
       name.append(stopLabel(stop), Object.assign(document.createElement('small'), { textContent: details.filter(Boolean).join(' · ') }));
       const item = document.createElement('li');
@@ -104,9 +175,10 @@ function renderWatching() {
 }
 
 function renderStops() {
+  const direction = selectedDirection();
   stopSelect.replaceChildren(
-    new Option('Choose a stop…', ''),
-    ...(timetable ? selectedDirection().stops.map((s) => new Option(displayName(s.name), s.id)) : []),
+    new Option(direction ? 'Choose a stop…' : 'Choose a route first', ''),
+    ...(direction ? direction.stops.map((s) => new Option(displayName(s.name), s.id)) : []),
   );
 }
 

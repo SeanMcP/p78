@@ -1,4 +1,4 @@
-import { ROUTE, arrivalStatus, displayName, fetchFeed, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
+import { arrivalStatus, fetchFeed, menuTitle, migrateStops, routeOf, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
 import { LEVELS, animateIcon, paintIcon } from './icon.js';
 import { loadTimetable } from './timetables.js';
 
@@ -22,6 +22,9 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
     await chrome.storage.sync.set({ stops: [{ ...stop, nearMinutes }] });
     await chrome.storage.sync.remove(['stop', 'nearMinutes']);
   }
+  // Before every route, stops had no route; they were all on P78.
+  const migrated = migrateStops(await chrome.storage.sync.get(['stops', 'activeStop']));
+  if (migrated) await chrome.storage.sync.set(migrated);
   if (reason === 'install') chrome.runtime.openOptionsPage();
 });
 chrome.runtime.onStartup.addListener(update);
@@ -75,13 +78,13 @@ async function togglePause() {
 }
 
 async function update() {
-  const [{ stops, stop }, { ignoredTrips }, idleState, schedule, paused] = await Promise.all([
+  const [{ stops, stop }, { ignoredTrips }, idleState, paused] = await Promise.all([
     savedStops(),
     chrome.storage.session.get('ignoredTrips'),
     chrome.idle.queryState(IDLE_SECONDS),
-    loadTimetable(ROUTE),
     pausedUntil(),
   ]);
+  const schedule = stop && !paused ? await loadTimetable(routeOf(stop)) : null;
   const liveChecked = !paused && shouldFetchLive({ idleState, timetable: schedule, stop });
   const feed = liveChecked ? await recentFeed() : null;
   const status = paused
@@ -117,7 +120,7 @@ function updateMenu(stops, activeStop, { tripId, ignored, paused }) {
       id: `stop:${stopKey(stop)}`,
       type: 'radio',
       checked: stop === activeStop,
-      title: stop.label ? stop.label : `${displayName(stop.name)} (${displayName(stop.direction.split('-')[0])})`,
+      title: menuTitle(stop),
     })),
     { id: 'ignore', title: ignored ? 'Watch this bus' : 'Ignore this bus', enabled: Boolean(tripId) },
     { id: 'pause', title: paused ? 'Resume updates' : 'Pause updates for 1 hour' },

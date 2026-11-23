@@ -4,8 +4,7 @@ import { DEFAULT_ROUTE, MAX_STOPS, directionName, displayName, routeOf, stopKey,
 import { DEFAULT_NEAR_MINUTES, LEVELS, paintIcon } from './icon.js';
 import { loadRoutes, loadTimetable, pruneTimetables } from './timetables.js';
 
-const routeInput = document.querySelector('#route');
-const routeList = document.querySelector('#routes');
+const routeSelect = document.querySelector('#route');
 const directionGroup = document.querySelector('#direction');
 const stopSelect = document.querySelector('#stop');
 const nameInput = document.querySelector('#name');
@@ -24,20 +23,12 @@ pruneTimetables(stops.map(routeOf));
 const routeIndex = await loadRoutes();
 const routes = routeIndex?.routes ?? [];
 document.querySelector('#notice').textContent = routeIndex?.notice ?? '';
-// The route shown, its timetable, and a counter so a slow download can't replace a newer choice.
-let route;
+// The route's timetable, and a counter so a slow download can't replace a newer choice.
 let timetable = null;
 let loading = 0;
 
-routeList.replaceChildren(...routes.map((r) => Object.assign(document.createElement('option'), { value: r.id, label: displayName(r.name) })));
-// Load a route when it's picked from the list, or typed and confirmed with Enter or by leaving the field.
-// Ignore other typing, so typing "71A" doesn't load route 7 on the way.
-routeInput.addEventListener('input', (event) => {
-  if (event.inputType === 'insertReplacementText' || event.inputType === undefined) showRoute(routeInput.value);
-});
-routeInput.addEventListener('change', () => {
-  if (routeInput.value !== route?.id) showRoute(routeInput.value);
-});
+routeSelect.replaceChildren(...routes.map((r) => new Option(`${r.id} ${displayName(r.name)}`, r.id)));
+routeSelect.addEventListener('change', () => showRoute(routeSelect.value));
 renderWatching();
 renderLegend(DEFAULT_NEAR_MINUTES);
 nearInput.value = DEFAULT_NEAR_MINUTES;
@@ -66,37 +57,23 @@ saveButton.addEventListener('click', async () => {
 if (routeIndex) {
   showRoute(stops.length ? routeOf(stops.at(-1)) : DEFAULT_ROUTE);
 } else {
-  routeInput.disabled = true;
+  routeSelect.disabled = true;
   showTimetable(null);
   status.textContent = "Couldn't load the bus routes. Check your connection, then reopen this page.";
 }
 
-// Finds a route by what's typed: its ID ("71a"), or its name if exactly one route has that name.
-function findRoute(text) {
-  const query = text.trim().toLowerCase();
-  if (!query) return;
-  const byName = routes.filter((r) => r.name.toLowerCase() === query);
-  return routes.find((r) => r.id.toLowerCase() === query) ?? (byName.length === 1 ? byName[0] : undefined);
-}
-
-async function showRoute(text) {
-  const found = findRoute(text);
+async function showRoute(routeId) {
   const request = ++loading;
-  if (!found) {
-    route = undefined;
-    showTimetable(null);
-    if (text.trim()) status.textContent = `No route matches “${text.trim()}”. Choose one from the list.`;
-    return;
-  }
-  route = found;
-  routeInput.value = found.id;
+  routeSelect.value = routeId;
+  // A saved stop's route may no longer run, so it isn't in the list.
+  if (routeSelect.value !== routeId) return showTimetable(null);
   // The previous route's stops stay on screen until this one loads, so Save can't pair them with this route.
   saveButton.disabled = true;
-  status.textContent = `Loading route ${found.id}…`;
-  const loaded = await loadTimetable(found.id);
+  status.textContent = `Loading route ${routeId}…`;
+  const loaded = await loadTimetable(routeId);
   if (request !== loading) return;
   showTimetable(loaded);
-  status.textContent = loaded ? '' : `Couldn't load route ${found.id}. Check your connection, then try again.`;
+  status.textContent = loaded ? '' : `Couldn't load route ${routeId}. Check your connection, then try again.`;
 }
 
 // Shows the directions and stops for `loaded`, or empties them when there's no timetable.
@@ -128,7 +105,7 @@ function selectedDirection() {
 function selectedStop() {
   const direction = selectedDirection();
   return {
-    route: route.id,
+    route: routeSelect.value,
     id: stopSelect.value,
     name: direction.stops.find((s) => s.id === stopSelect.value).name,
     direction: direction.name,

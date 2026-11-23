@@ -125,7 +125,6 @@ input[type='radio'] {
 }
 
 select,
-#route,
 #name {
   box-sizing: border-box;
   width: 100%;

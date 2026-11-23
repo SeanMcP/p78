@@ -9,7 +9,7 @@ const TIMETABLE_PREFIX = 'timetable:';
 // fails or doesn't pass `isValid`, falls back to the cached copy however old it is, or null if there's none.
 async function loadCached(path, key, isValid, { storage = chrome.storage.local, fetchFn = fetch, now = Date.now() } = {}) {
   const { [key]: cached } = await storage.get(key);
-  if (cached && now - cached.fetchedAt < MAX_AGE_MS) return cached.data;
+  if (cached?.data && now - cached.fetchedAt < MAX_AGE_MS) return cached.data;
 
   try {
     const response = await fetchFn(`${DATA_URL}${path}`);

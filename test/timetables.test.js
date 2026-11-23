@@ -97,3 +97,9 @@ test('removes cached timetables for routes no saved stop uses, and nothing else'
   assert.deepEqual(await pruneTimetables(['P78', '71A'], { storage }), ['timetable:28X']);
   assert.deepEqual(Object.keys(storage.data).sort(), ['routes', 'timetable:71A', 'timetable:P78']);
 });
+
+test('downloads again when a cached entry has no data', async () => {
+  const storage = fakeStorage({ 'timetable:P78': { timetable: timetable('old format'), fetchedAt: NOW } });
+  const { fetchFn } = fakeFetch(ok(timetable('new')));
+  assert.equal((await loadTimetable('P78', { storage, fetchFn, now: NOW })).version, 'new');
+});

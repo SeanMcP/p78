@@ -90,6 +90,8 @@ async function showRoute(text) {
   }
   route = found;
   routeInput.value = found.id;
+  // The previous route's stops stay on screen until this one loads, so Save can't pair them with this route.
+  saveButton.disabled = true;
   status.textContent = `Loading route ${found.id}…`;
   const loaded = await loadTimetable(found.id);
   if (request !== loading) return;

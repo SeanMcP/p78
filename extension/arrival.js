@@ -4,7 +4,7 @@ import { nextScheduled } from './schedule.js';
 import { DEFAULT_NEAR_MINUTES, LEVELS } from './icon.js';
 
 const ROUTE = 'P78';
-// With "Ignore this bus", this fills five of the six items Chrome allows in the icon's right-click menu.
+// With "Ignore this bus" and "Pause updates", this fills the six items Chrome allows in the icon's right-click menu.
 export const MAX_STOPS = 4;
 // Live data is fetched only when a bus is scheduled from LATE_MINUTES ago to AHEAD_MINUTES from now.
 // Looking back keeps a late bus tracked after its scheduled time passes.

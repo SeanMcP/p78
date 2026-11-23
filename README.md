@@ -16,7 +16,7 @@ Live arrivals come from PRT's feed, about 390 KB per download. To keep that load
 2. Click **Load unpacked** and choose the `extension` folder.
 3. Save up to 4 stops, each with an optional name and its own flash time.
 
-The icon shows one stop at a time. Right-click it to switch stops, or to **Ignore** a bus you won't catch: the countdown turns grey and stops flashing. Choose **Watch** to undo it. Click the icon to open the stop on PRT TrueTime.
+The icon shows one stop at a time. Right-click it to switch stops, or to **Ignore** a bus you won't catch: the countdown turns grey and stops flashing. Choose **Watch** to undo it. Choose **Pause updates for 1 hour** to stop updates on this computer while you won't need a bus. The icon shows ‖ until the hour ends or you choose **Resume updates**. Click the icon to open the stop on PRT TrueTime.
 
 ## Landing page
 

@@ -1,5 +1,5 @@
 import { arrivalStatus, displayName, fetchFeed, shouldFetchLive, stopKey, trueTimeUrl } from './arrival.js';
-import { animateIcon, paintIcon } from './icon.js';
+import { LEVELS, animateIcon, paintIcon } from './icon.js';
 
 const FEED_URL = 'https://truetime.rideprt.org/gtfsrt-bus/trips';
 const REFRESH_MINUTES = 1;
@@ -7,6 +7,7 @@ const REFRESH_MINUTES = 1;
 const IDLE_SECONDS = 5 * 60;
 // Reuse a feed fetched this recently, so changing a setting or ignoring a bus doesn't fetch again.
 const FEED_REUSE_MS = 55 * 1000;
+const PAUSE_MS = 60 * 60 * 1000;
 
 const timetable = fetch(chrome.runtime.getURL('stops.json')).then((response) => response.json());
 let stopAnimation = () => {};
@@ -34,6 +35,7 @@ chrome.idle.onStateChanged.addListener((state) => {
 });
 chrome.contextMenus.onClicked.addListener(async ({ menuItemId }) => {
   if (menuItemId.startsWith('stop:')) return chrome.storage.sync.set({ activeStop: menuItemId.slice('stop:'.length) });
+  if (menuItemId === 'pause') return togglePause();
 
   const { tripId, ignored } = lastStatus ?? (await update());
   if (!tripId) return;
@@ -55,16 +57,42 @@ async function savedStops() {
   return { stops, stop: stops.find((s) => stopKey(s) === activeStop) ?? stops[0] };
 }
 
+// The pause is saved locally, so pausing on one computer doesn't pause the others.
+async function pausedUntil() {
+  const { pausedUntil = 0 } = await chrome.storage.local.get('pausedUntil');
+  return pausedUntil > Date.now() ? pausedUntil : null;
+}
+
+async function togglePause() {
+  if (await pausedUntil()) {
+    chrome.alarms.clear('resume');
+    return chrome.storage.local.remove('pausedUntil');
+  }
+  const until = Date.now() + PAUSE_MS;
+  // Without this alarm, updates would resume only on the next refresh, up to a minute late.
+  chrome.alarms.create('resume', { when: until });
+  return chrome.storage.local.set({ pausedUntil: until });
+}
+
 async function update() {
-  const [{ stops, stop }, { ignoredTrips }, idleState, schedule] = await Promise.all([
+  const [{ stops, stop }, { ignoredTrips }, idleState, schedule, paused] = await Promise.all([
     savedStops(),
     chrome.storage.session.get('ignoredTrips'),
     chrome.idle.queryState(IDLE_SECONDS),
     timetable,
+    pausedUntil(),
   ]);
-  const liveChecked = shouldFetchLive({ idleState, timetable: schedule, stop });
+  const liveChecked = !paused && shouldFetchLive({ idleState, timetable: schedule, stop });
   const feed = liveChecked ? await recentFeed() : null;
-  const status = arrivalStatus({ feed, liveChecked, timetable: schedule, ignoredTrips, stop, nearMinutes: stop?.nearMinutes });
+  const status = paused
+    ? {
+        label: '‖',
+        level: LEVELS.scheduled,
+        heading: 'P78',
+        detail: `Paused until ${new Date(paused).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
+        paused: true,
+      }
+    : arrivalStatus({ feed, liveChecked, timetable: schedule, ignoredTrips, stop, nearMinutes: stop?.nearMinutes });
   const { label, level, heading, detail } = status;
   lastStatus = status;
 
@@ -82,8 +110,8 @@ async function recentFeed() {
   return bytes;
 }
 
-// The icon's right-click menu: the saved stops to switch between, then "Ignore this bus".
-function updateMenu(stops, activeStop, { tripId, ignored }) {
+// The icon's right-click menu: the saved stops to switch between, then "Ignore this bus" and "Pause updates".
+function updateMenu(stops, activeStop, { tripId, ignored, paused }) {
   const items = [
     ...(stops.length > 1 ? stops : []).map((stop) => ({
       id: `stop:${stopKey(stop)}`,
@@ -92,6 +120,7 @@ function updateMenu(stops, activeStop, { tripId, ignored }) {
       title: stop.label ? stop.label : `${displayName(stop.name)} (${displayName(stop.direction.split('-')[0])})`,
     })),
     { id: 'ignore', title: ignored ? 'Watch this bus' : 'Ignore this bus', enabled: Boolean(tripId) },
+    { id: 'pause', title: paused ? 'Resume updates' : 'Pause updates for 1 hour' },
   ];
   // Rebuild only when something changed, so an open menu isn't redrawn on every refresh.
   const menu = JSON.stringify(items);

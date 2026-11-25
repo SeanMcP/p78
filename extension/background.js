@@ -8,7 +8,9 @@ const REFRESH_MINUTES = 1;
 const IDLE_SECONDS = 5 * 60;
 // Reuse a feed fetched this recently, so changing a setting or ignoring a bus doesn't fetch again.
 const FEED_REUSE_MS = 55 * 1000;
-const PAUSE_MS = 60 * 60 * 1000;
+const PAUSE_HOURS = [1, 2, 4, 6];
+// "Until tomorrow" ends at this hour, so a late-night bus still counts as today.
+const TOMORROW_HOUR = 4;
 
 let stopAnimation = () => {};
 let lastStatus;
@@ -38,7 +40,9 @@ chrome.idle.onStateChanged.addListener((state) => {
 });
 chrome.contextMenus.onClicked.addListener(async ({ menuItemId }) => {
   if (menuItemId.startsWith('stop:')) return chrome.storage.sync.set({ activeStop: menuItemId.slice('stop:'.length) });
-  if (menuItemId === 'pause') return togglePause();
+  if (menuItemId === 'resume') return resume();
+  if (menuItemId === 'pause:tomorrow') return pause(nextTomorrowHour());
+  if (menuItemId.startsWith('pause:')) return pause(Date.now() + Number(menuItemId.slice('pause:'.length)) * 60 * 60 * 1000);
 
   const { tripId, ignored } = lastStatus ?? (await update());
   if (!tripId) return;
@@ -66,12 +70,19 @@ async function pausedUntil() {
   return pausedUntil > Date.now() ? pausedUntil : null;
 }
 
-async function togglePause() {
-  if (await pausedUntil()) {
-    chrome.alarms.clear('resume');
-    return chrome.storage.local.remove('pausedUntil');
-  }
-  const until = Date.now() + PAUSE_MS;
+function nextTomorrowHour() {
+  const until = new Date();
+  until.setHours(TOMORROW_HOUR, 0, 0, 0);
+  if (until <= Date.now()) until.setDate(until.getDate() + 1);
+  return until.getTime();
+}
+
+function resume() {
+  chrome.alarms.clear('resume');
+  return chrome.storage.local.remove('pausedUntil');
+}
+
+function pause(until) {
   // Without this alarm, updates would resume only on the next refresh, up to a minute late.
   chrome.alarms.create('resume', { when: until });
   return chrome.storage.local.set({ pausedUntil: until });
@@ -123,7 +134,17 @@ function updateMenu(stops, activeStop, { tripId, ignored, paused }) {
       title: menuTitle(stop),
     })),
     { id: 'ignore', title: ignored ? 'Watch this bus' : 'Ignore this bus', enabled: Boolean(tripId) },
-    { id: 'pause', title: paused ? 'Resume updates' : 'Pause updates for 1 hour' },
+    ...(paused
+      ? [{ id: 'resume', title: 'Resume updates' }]
+      : [
+          { id: 'pause', title: 'Pause updates' },
+          ...PAUSE_HOURS.map((hours) => ({
+            id: `pause:${hours}`,
+            parentId: 'pause',
+            title: hours === 1 ? 'For 1 hour' : `For ${hours} hours`,
+          })),
+          { id: 'pause:tomorrow', parentId: 'pause', title: 'Until tomorrow' },
+        ]),
   ];
   // Rebuild only when something changed, so an open menu isn't redrawn on every refresh.
   const menu = JSON.stringify(items);
